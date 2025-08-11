@@ -20,7 +20,7 @@ import hashlib
 import json
 import re
 import time
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 import requests
@@ -380,11 +380,29 @@ class AliExpressClient:
             }
 
             # Add core seller fields for comprehensive seller data
+            # Get seller info from both shop_info and seller_info
+            seller_info_data = shop_info.get("sellerInfo", {})
+            store_url = seller_info_data.get("storeURL", "N/A")
+
+            # Format store URL to include https protocol if it starts with //
+            if store_url != "N/A" and store_url.startswith("//"):
+                store_url = "https:" + store_url
+
+            # Extract seller rating from benefitInfoList
+            seller_rating: Union[str, Any] = "N/A"
+            benefit_info_list: List[Dict[str, Any]] = shop_info.get(
+                "benefitInfoList", []
+            )
+            for item in benefit_info_list:
+                if item and item.get("title") == "store rating":
+                    seller_rating = item.get("value", "N/A")
+                    break
+
             product_info["seller"] = {
                 "name": shop_info.get("storeName", "N/A"),
                 "profile_picture": shop_info.get("logo", "N/A"),
-                "profile_url": shop_info.get("storeHomePage", "N/A"),
-                "rating": shop_info.get("sellerScore", "N/A"),
+                "profile_url": store_url,
+                "rating": seller_rating,
                 "total_reviews": shop_info.get("sellerTotalNum", "N/A"),
                 "country": seller_info.get("countryCompleteName", "N/A"),
             }

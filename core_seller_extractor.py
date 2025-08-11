@@ -27,7 +27,7 @@ Author: Core Seller Fields Module
 Date: August 2025
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 
 class CoreSellerExtractor:
@@ -45,8 +45,8 @@ class CoreSellerExtractor:
         self.core_fields = {
             "seller_name": "SHOP_CARD_PC.storeName",
             "seller_profile_picture": "SHOP_CARD_PC.logo",
-            "seller_profile_url": "SHOP_CARD_PC.storeHomePage",
-            "seller_rating": "SHOP_CARD_PC.sellerScore",
+            "seller_profile_url": "SHOP_CARD_PC.sellerInfo.storeURL",
+            "seller_rating": "SHOP_CARD_PC.benefitInfoList[store rating]",
             "total_reviews": "SHOP_CARD_PC.sellerTotalNum",
             "country": "SHOP_CARD_PC.sellerInfo.countryCompleteName",
         }
@@ -73,7 +73,7 @@ class CoreSellerExtractor:
             seller_info = shop_card_data.get("sellerInfo", {})
 
             # Extract the 6 core fields
-            core_data = {}
+            core_data: Dict[str, Any] = {}
 
             # 1. Seller Name
             seller_name = shop_card_data.get("storeName")
@@ -85,13 +85,25 @@ class CoreSellerExtractor:
             if profile_picture:
                 core_data["seller_profile_picture"] = profile_picture
 
-            # 3. Seller Profile URL
-            profile_url = shop_card_data.get("storeHomePage")
-            if profile_url:
-                core_data["seller_profile_url"] = profile_url
+            # 3. Seller Profile URL - Use storeURL from mtop API response and format it properly
+            store_url = shop_card_data.get("sellerInfo", {}).get("storeURL")
+            if store_url:
+                # Format the URL properly (add https: if it starts with //)
+                if store_url.startswith("//"):
+                    core_data["seller_profile_url"] = "https:" + store_url
+                else:
+                    core_data["seller_profile_url"] = store_url
 
-            # 4. Seller Rating
-            rating = shop_card_data.get("sellerScore")
+            # 4. Seller Rating - Extract from benefitInfoList where title is "store rating"
+            benefit_info_list: List[Dict[str, Any]] = shop_card_data.get(
+                "benefitInfoList", []
+            )
+            rating: Any = None
+            for benefit in benefit_info_list:
+                if benefit and benefit.get("title") == "store rating":
+                    rating = benefit.get("value")
+                    break
+
             if rating:
                 # Convert to numeric if possible for easier processing
                 try:
@@ -147,7 +159,7 @@ class CoreSellerExtractor:
             return {"error": "No seller data could be extracted"}
 
         # Create a clean summary
-        summary = {
+        summary: Dict[str, Any] = {
             "seller_info": {},
             "contact_info": {},
             "reputation": {},
@@ -261,17 +273,25 @@ def demo_core_extraction():
     print()
 
     # Sample API response structure (from actual API analysis)
-    sample_response = {
+    sample_response: Dict[str, Any] = {
         "data": {
             "data": {
                 "result": {
                     "SHOP_CARD_PC": {
                         "storeName": "TechGadgets Pro Store",
                         "logo": "https://ae-pic-a1.aliexpress-media.com/kf/example.png",
-                        "storeHomePage": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=123456789",
-                        "sellerScore": "87.5",
+                        "storeURL": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=123456789",
                         "sellerTotalNum": "1247",
-                        "sellerInfo": {"countryCompleteName": "China"},
+                        "benefitInfoList": [
+                            {"title": "# sold in 180 days ", "value": "100+"},
+                            {"title": "positive reviews", "value": "100.0%"},
+                            {"title": "store rating", "value": "4.5"},
+                            {"title": "Communication", "value": "4.7"},
+                        ],
+                        "sellerInfo": {
+                            "countryCompleteName": "United States",
+                            "storeURL": "//www.aliexpress.com/store/1104278284",
+                        },
                     }
                 }
             }
