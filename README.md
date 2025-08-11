@@ -1,24 +1,25 @@
+
 # AliExpress Product Scraper
 
-A complete reverse engineered AliExpress client that uses their internal MTOP API to extract product data with proper authentication and signatures. Now includes a powerful CLI tool for easy usage.
+This project provides a fully reverse-engineered AliExpress client that interacts directly with AliExpress's internal MTOP API to extract comprehensive product data. It includes a command-line interface (CLI) for convenient usage and can also be used as a Python library.
 
-## 🎯 What This Is
+## Overview
 
-This is a **complete reverse engineering** of AliExpress's signature algorithm, extracted directly from their JavaScript source code. It's not a web scraper or HTML parser - it uses their actual internal API endpoints with proper authentication.
+This client implements AliExpress's signature algorithm and authentication, based on analysis of their JavaScript source code. It does not scrape HTML; instead, it communicates with the official internal API endpoints for reliable and accurate data extraction.
 
-## ✅ Key Features
+## Features
 
-- **🔐 Reverse engineered signature algorithm**: MD5-based signing extracted from AliExpress JavaScript
-- **📦 Complete product data extraction**: Title, price, ratings, store info, shipping, variants, images
-- **🔌 Real MTOP API integration**: Uses actual AliExpress internal endpoints
-- **🖥️ CLI tool**: Command-line interface for easy usage
-- **📄 Multiple output formats**: Human-readable text, JSON, verbose details
-- **🎯 Flexible input**: Support for URLs or product IDs
-- **⚡ Production ready**: Clean, single-module implementation
+- Reverse engineered signature algorithm (MD5-based, as used by AliExpress)
+- Complete product data extraction: title, price, ratings, store information, shipping, variants, images, and more
+- Direct integration with AliExpress MTOP API endpoints
+- Command-line interface (CLI) for easy access
+- Multiple output formats: human-readable, JSON, verbose
+- Flexible input: supports both product URLs and IDs
+- Single-module, production-ready implementation
 
-## 🚀 Quick Start
+## Quick Start
 
-### CLI Usage (Recommended)
+### CLI Usage
 
 ```bash
 # Basic usage
@@ -40,8 +41,6 @@ python cli.py -u "URL" -c "cookie" --verbose
 from aliexpress_client import AliExpressClient
 
 client = AliExpressClient()
-
-# Your fresh cookie from browser
 cookie = "_m_h5_tk=your_token_here_1234567890; _m_h5_tk_enc=encrypted_token; ..."
 
 # Get product data
@@ -51,7 +50,7 @@ product_data = client.get_product("3256809096800275", cookie)
 client.print_product_summary(product_data)
 ```
 
-## �️ Installation
+## Installation
 
 1. **Clone the repository**:
 
@@ -64,17 +63,17 @@ client.print_product_summary(product_data)
 
    ```bash
    pip install requests
-   # OR if using uv
+   # Or, if using uv:
    uv sync
    ```
 
-3. **Get a fresh cookie from AliExpress**:
-   - Go to <https://www.aliexpress.us> in your browser
-   - Open DevTools (F12) → Network tab
-   - Refresh page or browse a product
-   - Find any request and copy the entire 'Cookie' header value
+3. **Obtain a fresh cookie from AliExpress**:
+   - Visit <https://www.aliexpress.us> in your browser
+   - Open Developer Tools (F12) and go to the Network tab
+   - Refresh the page or open a product
+   - Copy the entire 'Cookie' header from any request
 
-## 📖 Usage Examples
+## Usage Examples
 
 ### CLI Examples
 
@@ -105,31 +104,28 @@ cookie = "your_fresh_cookie_here"
 result = client.get_product("3256809096800275", cookie)
 
 if result['success']:
-    print(f"Product: {result['title']}")
-    print(f"Price: {result['price']['sale_price']}")
-    print(f"Rating: {result['rating']['score']} stars")
-    
-    # Save to JSON
-    with open('product.json', 'w') as f:
-        json.dump(result, f, indent=2)
+   print(f"Product: {result['title']}")
+   print(f"Price: {result['price']['sale_price']}")
+   print(f"Rating: {result['rating']['score']} stars")
+   # Save to JSON
+   with open('product.json', 'w') as f:
+      json.dump(result, f, indent=2)
 else:
-    print(f"Error: {result['error']}")
+   print(f"Error: {result['error']}")
 ```
 
-## 📊 Extracted Data
+## Extracted Data
 
-The scraper extracts comprehensive product information:
+The scraper extracts the following product information:
 
-- **📝 Basic Info**: Title, product ID, description
-- **💰 Pricing**: Sale price, original price, currency, discounts
-- **⭐ Ratings**: Star rating, total sales, customer reviews
-- **🏪 Store Details**: Store name, seller rating, location, history
-- **🚚 Shipping**: Delivery times, costs, carrier, shipping from
-- **🎨 Variants**: Colors, sizes, configurations, SKU options
-- **🖼️ Media**: Product images, gallery photos
-- **📈 Metadata**: API trace IDs, data sections, timestamps
-
-## 🔧 CLI Options
+- Basic Info: Title, product ID, description
+- Pricing: Sale price, original price, currency, discounts
+- Ratings: Star rating, total sales, customer reviews
+- Store Details: Store name, seller rating, location, history
+- Shipping: Delivery times, costs, carrier, shipping origin
+- Variants: Colors, sizes, configurations, SKU options
+- Media: Product images, gallery photos
+- Metadata: API trace IDs, data sections, timestamps
 
 ```bash
 usage: cli.py [-h] [-u PRODUCT_URL] [-p PRODUCT_ID] [-c COOKIE_STRING]
@@ -146,42 +142,42 @@ Options:
   --raw                Output raw API response
 ```
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```bash
 aliexpress-scraper/
 ├── aliexpress_client.py    # Core scraper library
 ├── cli.py                  # Command-line interface
-├── example.py             # Usage examples
-├── CLI_README.md          # Detailed CLI documentation
-├── cli_demo.sh           # CLI demonstration script
-└── README.md             # This file
+├── example.py              # Usage examples
+├── CLI_README.md           # Detailed CLI documentation
+├── cli_demo.sh             # CLI demonstration script
+└── README.md               # This file
 ```
 
-## 🔍 Technical Details
+## Technical Details
 
 - **Signature Algorithm**: `MD5(token + '&' + timestamp + '&' + appKey + '&' + data)`
 - **API Protocol**: MTOP JSONP with callback wrapping
 - **Authentication**: Cookie-based with `_m_h5_tk` tokens
 - **Endpoints**: `acs.aliexpress.us/h5/mtop.aliexpress.pdp.pc.query/`
-- **Response Format**: JSONP wrapped JSON data
+- **Response Format**: JSONP-wrapped JSON data
 
-## 🏆 Success Metrics
+## Project Highlights
 
-- ✅ **100% reverse engineered** from JavaScript source code  
-- ✅ **Real API integration** (not HTML scraping)
-- ✅ **Working signature algorithm** extracted from AliExpress JavaScript
-- ✅ **Complete product data** extraction and parsing
-- ✅ **CLI tool** for easy command-line usage
-- ✅ **Production ready** with comprehensive error handling
+- Fully reverse engineered from AliExpress JavaScript source code
+- Real API integration (not HTML scraping)
+- Working signature algorithm
+- Complete product data extraction and parsing
+- CLI tool for command-line usage
+- Production ready with error handling
 
-## 📚 Documentation
+## Documentation
 
-- **[CLI Documentation](CLI_README.md)** - Comprehensive CLI usage guide
-- **[Example Usage](example.py)** - Working Python examples
-- **[Demo Script](cli_demo.sh)** - CLI feature demonstration
+- [CLI Documentation](CLI_README.md): Comprehensive CLI usage guide
+- [Example Usage](example.py): Python usage examples
+- [Demo Script](cli_demo.sh): CLI demonstration
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -189,13 +185,9 @@ aliexpress-scraper/
 4. Test with fresh cookies
 5. Submit a pull request
 
-## ⚠️ Important Notes
+## Important Notes
 
-- **Fresh cookies required**: AliExpress tokens expire regularly
-- **Rate limiting**: Be respectful to AliExpress servers
-- **Legal compliance**: Use responsibly and respect terms of service
-- **Educational purpose**: This is for learning reverse engineering techniques
-
----
-
-**🎉 Mission Accomplished**: Complete reverse engineering of AliExpress's internal API with a powerful CLI tool!
+- Fresh cookies are required: AliExpress tokens expire regularly
+- Rate limiting: Please be respectful to AliExpress servers
+- Legal compliance: Use responsibly and respect AliExpress terms of service
+- Educational purpose: This project is for learning and research purposes only
