@@ -29,9 +29,13 @@ Examples:
 """
 
 import argparse
+import csv
+import io
 import json
 import re
 import sys
+import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from enhanced_aliexpress_client import EnhancedAliExpressClient
@@ -213,6 +217,227 @@ def format_output_json(data: Dict[str, Any], pretty: bool = True) -> str:
         return json.dumps(data, ensure_ascii=False)
 
 
+def format_seller_data_for_csv(
+    seller_data: Dict[str, Any], product_id: str
+) -> Dict[str, Any]:
+    """
+    Format seller data according to the CSV schema with null values for missing fields.
+
+    Args:
+        seller_data: Extracted seller data from CoreSellerExtractor
+        product_id: Product ID for reference
+
+    Returns:
+        Dictionary with all CSV columns populated (missing values set to "null")
+    """
+
+    # Generate a UUID for seller_uuid if not available
+    seller_uuid = str(uuid.uuid4())
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[
+        :-3
+    ]  # milliseconds precision
+
+    # Base CSV structure with null defaults
+    csv_row: dict[str, Any] = {
+        "seller_uuid": seller_uuid,
+        "seller_name": "null",
+        "profile_photo_url": "null",
+        "seller_profile_url": "null",
+        "seller_rating": "null",
+        "total_reviews": "null",
+        "contact_methods": "[]",  # JSON array format as in sample
+        "email_address": "null",
+        "phone_number": "null",
+        "physical_address": "null",
+        "verification_status": "Unverified",
+        "seller_status": "New",
+        "enforcement_status": "None",
+        "map_compliance_status": "Compliant",
+        "associated_listings": 0,
+        "date_added": current_time,
+        "last_updated": current_time,
+        "blacklisted": False,
+        "counterfeiter": False,
+        "priority_seller": False,
+        "seller_note": "null",
+        "seller_id": "null",  # Will try to extract from URL
+        "admin_priority_seller": False,
+        "known_counterfeiter": False,
+        "seller_admin_stage": "NA",
+        "seller_investigation": "NotStarted",
+        "seller_stage": "NA",
+        "seller_state": "Active",
+    }
+
+    # Populate available fields from seller_data
+    if "seller_name" in seller_data and seller_data["seller_name"]:
+        csv_row["seller_name"] = seller_data["seller_name"]
+
+    if (
+        "seller_profile_picture" in seller_data
+        and seller_data["seller_profile_picture"]
+    ):
+        csv_row["profile_photo_url"] = seller_data["seller_profile_picture"]
+
+    if "seller_profile_url" in seller_data and seller_data["seller_profile_url"]:
+        csv_row["seller_profile_url"] = seller_data["seller_profile_url"]
+
+        # Try to extract seller_id from URL
+        url = seller_data["seller_profile_url"]
+        seller_id_match = re.search(r"sellerAdminSeq=([A-Z0-9]+)", url)
+        if seller_id_match:
+            csv_row["seller_id"] = seller_id_match.group(1)
+
+    if "seller_rating" in seller_data and seller_data["seller_rating"]:
+        # Handle both string and numeric values for seller rating
+        try:
+            rating_value = float(seller_data["seller_rating"])
+            csv_row["seller_rating"] = f"{rating_value:.2f}"
+        except (ValueError, TypeError):
+            # If conversion fails, use the original value as string
+            csv_row["seller_rating"] = str(seller_data["seller_rating"])
+
+    if "total_reviews" in seller_data and seller_data["total_reviews"]:
+        # Handle both string and numeric values for total reviews
+        try:
+            reviews_value = int(seller_data["total_reviews"])
+            csv_row["total_reviews"] = reviews_value
+        except (ValueError, TypeError):
+            # If conversion fails, try to extract numbers from string
+            number_match = re.search(r"(\d+)", str(seller_data["total_reviews"]))
+            if number_match:
+                csv_row["total_reviews"] = int(number_match.group(1))
+            else:
+                csv_row["total_reviews"] = str(seller_data["total_reviews"])
+
+    return csv_row
+
+
+def extract_seller_info_for_csv(
+    product_input: str,
+    client: EnhancedAliExpressClient,
+    manual_cookie: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Extract seller info and format for CSV output.
+
+    Args:
+        product_input: Product ID or URL
+        client: Enhanced AliExpress client
+        manual_cookie: Optional manual cookie override
+
+    Returns:
+        Dictionary with extraction result and formatted CSV data
+    """
+    # Extract product ID
+    product_id = extract_product_id_from_url(product_input)
+    if not product_id:
+        return {
+            "success": False,
+            "error": f"Could not extract product ID from: {product_input}",
+        }
+
+    try:
+        # Get product data which includes seller information
+        if manual_cookie:
+            product_result = client.get_product(product_id, manual_cookie)
+        else:
+            product_result = client.get_product(product_id)
+
+        if not product_result.get("success"):
+            return {
+                "success": False,
+                "error": f"Failed to get product: {product_result.get('error')}",
+            }
+
+        # Extract seller data from the product result
+        seller_data_raw = product_result.get("seller", {})
+
+        # Convert to the format expected by the CSV formatter
+        seller_data: dict[str, Any] = {}
+        if seller_data_raw.get("name") and seller_data_raw["name"] != "N/A":
+            seller_data["seller_name"] = seller_data_raw["name"]
+        if (
+            seller_data_raw.get("profile_picture")
+            and seller_data_raw["profile_picture"] != "N/A"
+        ):
+            seller_data["seller_profile_picture"] = seller_data_raw["profile_picture"]
+        if (
+            seller_data_raw.get("profile_url")
+            and seller_data_raw["profile_url"] != "N/A"
+        ):
+            seller_data["seller_profile_url"] = seller_data_raw["profile_url"]
+        if seller_data_raw.get("rating") and seller_data_raw["rating"] != "N/A":
+            seller_data["seller_rating"] = seller_data_raw["rating"]
+        if (
+            seller_data_raw.get("total_reviews")
+            and seller_data_raw["total_reviews"] != "N/A"
+        ):
+            seller_data["total_reviews"] = seller_data_raw["total_reviews"]
+        if seller_data_raw.get("country") and seller_data_raw["country"] != "N/A":
+            seller_data["country"] = seller_data_raw["country"]
+
+        # Create a simple quality assessment
+        fields_extracted = len(seller_data)
+        extraction_rate = f"{fields_extracted / 6 * 100:.1f}%"
+
+        if fields_extracted >= 5:
+            quality_level = "Excellent"
+        elif fields_extracted >= 4:
+            quality_level = "Good"
+        elif fields_extracted >= 2:
+            quality_level = "Fair"
+        else:
+            quality_level = "Poor"
+
+        quality = {
+            "quality": quality_level,
+            "extraction_rate": extraction_rate,
+            "message": f"Extracted {fields_extracted}/6 core fields",
+        }
+
+        # Format for CSV
+        csv_data = format_seller_data_for_csv(seller_data, product_id)
+
+        return {
+            "success": True,
+            "product_id": product_id,
+            "seller_data": seller_data,
+            "csv_data": csv_data,
+            "quality": quality,
+        }
+
+    except Exception as e:
+        return {"success": False, "error": f"Extraction failed: {str(e)}"}
+
+
+def output_seller_csv(csv_data: Dict[str, Any], output_format: str = "csv") -> str:
+    """
+    Output seller data in CSV format.
+
+    Args:
+        csv_data: Formatted CSV data dictionary
+        output_format: 'csv' or 'json'
+
+    Returns:
+        Formatted output string
+    """
+    if output_format == "json":
+        return json.dumps(csv_data, indent=2, ensure_ascii=False)
+
+    # CSV format
+    output = io.StringIO()
+
+    # Get field names from CSV data
+    fieldnames = list(csv_data.keys())
+
+    writer = csv.DictWriter(output, fieldnames=fieldnames, quoting=csv.QUOTE_MINIMAL)
+    writer.writeheader()
+    writer.writerow(csv_data)
+
+    return output.getvalue()
+
+
 def handle_test_automation(
     client: EnhancedAliExpressClient, verbose: bool = False
 ) -> None:
@@ -255,6 +480,15 @@ Examples:
   # JSON output
   %(prog)s -u "https://aliexpress.com/item/123.html" --json
   
+  # Extract seller info in CSV format
+  %(prog)s --product-id 3256809096800275 --seller-csv
+  
+  # Extract seller info in JSON format (CSV schema)
+  %(prog)s "https://aliexpress.us/item/123.html" --seller-json
+  
+  # Show seller extraction demo (no API call)
+  %(prog)s --seller-demo
+  
   # Test automation system
   %(prog)s --test-automation
 
@@ -263,6 +497,12 @@ Cookie automation:
   - Subsequent runs: Uses cached cookies (1-minute validity)
   - Automatic retry with fresh cookies on failure
   - Manual cookie override always available
+
+Seller extraction:
+  - Extracts seller/store information from product pages
+  - Outputs in CSV format compatible with existing schemas
+  - Missing fields are populated with "null" values
+  - Only 6 core seller fields available from AliExpress API
 
 Manual cookie format example:
   "_m_h5_tk=token_here_1234567890; other=cookies; ..."
@@ -317,6 +557,23 @@ Manual cookie format example:
     )
     parser.add_argument("--raw", action="store_true", help="Output raw API response")
 
+    # Seller extraction options
+    parser.add_argument(
+        "--seller-csv",
+        action="store_true",
+        help="Extract seller info and output in CSV format with all required columns",
+    )
+    parser.add_argument(
+        "--seller-json",
+        action="store_true",
+        help="Extract seller info and output in JSON format matching CSV schema",
+    )
+    parser.add_argument(
+        "--seller-demo",
+        action="store_true",
+        help="Show demo seller extraction with sample data (no API call required)",
+    )
+
     # Automation options
     parser.add_argument(
         "--test-automation",
@@ -346,6 +603,41 @@ Manual cookie format example:
     )
 
     # Handle test automation
+    # Handle demo modes first
+    if args.seller_demo:
+        print("🎭 SELLER EXTRACTION DEMO")
+        print("=" * 30)
+        print("This demonstrates the seller CSV/JSON output format")
+        print("Available fields: seller_name, profile_photo_url, seller_profile_url,")
+        print("                 seller_rating, total_reviews, seller_id, country")
+        print("Missing fields are set to 'null' as required.")
+        print()
+
+        # Demo seller data
+        demo_seller_data: dict[str, Any] = {
+            "seller_name": "TechWorld Store",
+            "seller_profile_picture": "https://ae-pic-a1.aliexpress-media.com/kf/demo.png",
+            "seller_profile_url": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=ABC123",
+            "seller_rating": 89.5,
+            "total_reviews": 2156,
+            "country": "China",
+        }
+
+        csv_data = format_seller_data_for_csv(demo_seller_data, "3256809096800275")
+
+        print("📋 CSV Format:")
+        print("-" * 15)
+        print(output_seller_csv(csv_data, "csv"))
+
+        print("\n📋 JSON Format:")
+        print("-" * 16)
+        print(output_seller_csv(csv_data, "json"))
+
+        print("\n💡 Usage Examples:")
+        print("python enhanced_cli.py --product-id 123456 --seller-csv")
+        print("python enhanced_cli.py --product-id 123456 --seller-json")
+        sys.exit(0)
+
     if args.test_automation:
         handle_test_automation(client, args.verbose)
         return
@@ -430,6 +722,38 @@ Manual cookie format example:
         print(file=sys.stderr)
 
     try:
+        # Handle seller extraction modes
+        if args.seller_csv or args.seller_json:
+            if args.verbose:
+                print("🏪 Extracting seller information...", file=sys.stderr)
+
+            result = extract_seller_info_for_csv(
+                product_input, client, args.cookie_string
+            )
+
+            if not result["success"]:
+                print(
+                    f"❌ Seller extraction failed: {result['error']}", file=sys.stderr
+                )
+                sys.exit(1)
+
+            if args.verbose:
+                print(f"✅ Seller extraction completed", file=sys.stderr)
+                print(
+                    f"🏆 Quality: {result['quality']['quality']} ({result['quality']['extraction_rate']})",
+                    file=sys.stderr,
+                )
+                print(file=sys.stderr)
+
+            # Output in requested format
+            if args.seller_json:
+                print(output_seller_csv(result["csv_data"], output_format="json"))
+            else:  # args.seller_csv
+                print(output_seller_csv(result["csv_data"], output_format="csv"))
+
+            sys.exit(0)
+
+        # Standard product extraction
         # Get product data with enhanced client
         if args.force_fresh_cookies and not args.cookie_string:
             # Force fresh cookies by clearing cache first
@@ -446,7 +770,11 @@ Manual cookie format example:
             print(format_output_text(product_data, verbose=args.verbose))
 
         # Show automation status in verbose mode
-        if args.verbose and not args.cookie_string:
+        if (
+            args.verbose
+            and not args.cookie_string
+            and not (args.seller_csv or args.seller_json)
+        ):
             print(file=sys.stderr)
             print("🤖 Automation Status:", file=sys.stderr)
             status = client.get_automation_status()

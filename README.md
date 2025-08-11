@@ -46,6 +46,12 @@ python enhanced_cli.py --product-id 3256809096800275 --json
 # Batch processing multiple products
 python enhanced_cli.py --batch "3256809096800275,1234567890123,9876543210987"
 
+# Seller extraction in CSV format
+python enhanced_cli.py --product-id 3256809096800275 --seller-csv
+
+# Seller extraction in JSON format  
+python enhanced_cli.py --product-id 3256809096800275 --seller-json
+
 # Test the automation system
 python enhanced_cli.py --test-automation
 ```
@@ -144,7 +150,81 @@ python core_seller_cli.py --demo
 - **Fair**: 2-3 fields extracted (33-50%)
 - **Poor**: 0-1 fields extracted (0-17%)
 
-### 📋 **Manual Cookie Mode (Original)**
+### � **Seller CSV/JSON Extraction**
+
+Extract seller information formatted for CSV schema compatibility with all required columns:
+
+**CLI Options:**
+
+- `--seller-csv` - Extract seller info and output in CSV format
+- `--seller-json` - Extract seller info and output in JSON format (matching CSV schema)
+- `--seller-demo` - Show demo extraction with sample data (no API call required)
+
+**Usage Examples:**
+
+```bash
+# Basic seller extraction (CSV format)
+python enhanced_cli.py --product-id 3256809096800275 --seller-csv
+
+# JSON format with CSV schema
+python enhanced_cli.py "https://www.aliexpress.us/item/3256809096800275.html" --seller-json
+
+# Demo with sample data
+python enhanced_cli.py --seller-demo
+
+# With manual cookies
+python enhanced_cli.py --product-id 123456 --seller-csv --cookie "your_cookie_here"
+```
+
+**Output Format:**
+
+The output follows a comprehensive CSV schema with these field categories:
+
+**Available Fields (Populated from AliExpress API):**
+
+- `seller_name` - Store/seller display name
+- `profile_photo_url` - Seller avatar/logo URL  
+- `seller_profile_url` - Direct link to seller's store
+- `seller_rating` - Numerical rating (formatted as decimal)
+- `total_reviews` - Total seller interactions/reviews
+- `seller_id` - Extracted from profile URL (when available)
+
+**System Fields (Auto-generated):**
+
+- `seller_uuid` - Auto-generated UUID for each extraction
+- `date_added` / `last_updated` - Current timestamp
+- `verification_status` - Set to "Unverified"
+- `seller_status` - Set to "New"
+- `seller_state` - Set to "Active"
+- Various compliance and admin fields with default values
+
+**Missing Fields (Set to "null"):**
+
+- `email_address`, `phone_number`, `physical_address` - Not available in AliExpress API
+- Other contact/business detail fields
+
+**Example JSON Output:**
+
+```json
+{
+  "seller_uuid": "abc123-def4-5678-90ab-cdef12345678",
+  "seller_name": "Brick Lane Store",
+  "profile_photo_url": "https://ae-pic-a1.aliexpress-media.com/kf/demo.png",
+  "seller_profile_url": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=6064672433",
+  "seller_rating": "44.00",
+  "total_reviews": 52,
+  "contact_methods": "[]",
+  "email_address": "null",
+  "phone_number": "null",
+  "physical_address": "null",
+  "verification_status": "Unverified",
+  "seller_status": "New",
+  "seller_id": "6064672433",
+  "seller_state": "Active"
+}
+```
+
+### �📋 **Manual Cookie Mode (Original)**
 
 If automation doesn't work, you can still use manual cookies:
 
@@ -171,7 +251,7 @@ python enhanced_cli.py --product-id 3256809096800275 --cookie "your_cookie_here"
 
 **Documentation:**
 
-- `CORE_SELLER_README.md` - Detailed seller extraction guide
+- `README.md` - Complete project documentation including seller extraction guide
 - `CORE_FIELDS_SUMMARY.py` - Implementation summary
 
 ## Installation
@@ -328,16 +408,25 @@ for result in results:
 
 ```bash
 # Get help
-python cli.py --help
+python enhanced_cli.py --help
 
 # Basic product info
-python cli.py "https://www.aliexpress.us/item/3256809096800275.html" "cookie"
+python enhanced_cli.py "https://www.aliexpress.us/item/3256809096800275.html"
 
 # Detailed information
-python cli.py --product-id 3256809096800275 --cookie "cookie" --verbose
+python enhanced_cli.py --product-id 3256809096800275 --verbose
 
 # JSON for integration
-python cli.py -p 3256809096800275 -c "cookie" --json > product.json
+python enhanced_cli.py -p 3256809096800275 --json > product.json
+
+# Seller extraction in CSV format
+python enhanced_cli.py --product-id 3256809096800275 --seller-csv
+
+# Seller extraction in JSON format
+python enhanced_cli.py --product-id 3256809096800275 --seller-json
+
+# Demo seller extraction
+python enhanced_cli.py --seller-demo
 ```
 
 ### Library Examples
