@@ -41,7 +41,7 @@ class EnhancedAliExpressClient(AliExpressClient):
     def __init__(
         self,
         base_url: str = "https://acs.aliexpress.us",
-        cookie_cache_minutes: int = 1,
+        cookie_cache_minutes: int = 30,
         auto_retry: bool = True,
         headless_browser: bool = True,
     ):
@@ -50,7 +50,7 @@ class EnhancedAliExpressClient(AliExpressClient):
 
         Args:
             base_url: Base URL for API requests
-            cookie_cache_minutes: How long to cache cookies (default: 1 minute)
+            cookie_cache_minutes: How long to cache cookies (default: 30 minutes)
             auto_retry: Whether to retry with fresh cookies on failure
             headless_browser: Whether to run browser in headless mode
         """
@@ -421,7 +421,7 @@ def main():
 
     # Initialize enhanced client
     client = EnhancedAliExpressClient(
-        cookie_cache_minutes=1,  # 1-minute cache
+        cookie_cache_minutes=30,  # 30-minute cache
         auto_retry=True,
         headless_browser=True,
     )
