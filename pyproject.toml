@@ -1,0 +1,19 @@
+[project]
+name = "aliexpress-scraper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "flask>=3.1.1",
+    "playwright>=1.54.0",
+    "requests>=2.32.0",
+    "python-aliexpress-api>=3.1.0",
+    "pandas>=2.3.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.7",
+]
