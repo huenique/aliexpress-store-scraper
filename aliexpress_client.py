@@ -379,6 +379,16 @@ class AliExpressClient:
                 "open_time": seller_info.get("formatOpenTime", "N/A"),
             }
 
+            # Add core seller fields for comprehensive seller data
+            product_info["seller"] = {
+                "name": shop_info.get("storeName", "N/A"),
+                "profile_picture": shop_info.get("logo", "N/A"),
+                "profile_url": shop_info.get("storeHomePage", "N/A"),
+                "rating": shop_info.get("sellerScore", "N/A"),
+                "total_reviews": shop_info.get("sellerTotalNum", "N/A"),
+                "country": seller_info.get("countryCompleteName", "N/A"),
+            }
+
         # Extract shipping information
         shipping_info = product_data.get("SHIPPING", {})
         if shipping_info and "deliveryLayoutInfo" in shipping_info:

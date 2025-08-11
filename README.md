@@ -18,6 +18,8 @@ This project provides a fully reverse-engineered AliExpress client with **automa
 - Reverse engineered signature algorithm (MD5-based, as used by AliExpress)
 - Direct integration with AliExpress MTOP API endpoints
 - Complete product data extraction: title, price, ratings, store info, shipping, variants, images, and more
+- **Automatic seller field extraction**: 6 core seller fields included in every product response
+- Seller data: name, profile picture, profile URL, rating, total reviews, country
 
 ### 💻 **User-Friendly Interface**
 
@@ -363,16 +365,49 @@ else:
 
 ## Extracted Data
 
-The scraper extracts the following product information:
+The scraper extracts the following comprehensive product information:
+
+**Product Details:**
 
 - Basic Info: Title, product ID, description
 - Pricing: Sale price, original price, currency, discounts
 - Ratings: Star rating, total sales, customer reviews
-- Store Details: Store name, seller rating, location, history
-- Shipping: Delivery times, costs, carrier, shipping origin
 - Variants: Colors, sizes, configurations, SKU options
 - Media: Product images, gallery photos
 - Metadata: API trace IDs, data sections, timestamps
+
+**Store Information:**
+
+- Store Details: Store name, seller rating, location, history
+- Seller Fields: Complete seller profile data (6 core fields)
+
+**Shipping Information:**
+
+- Delivery times, costs, carrier, shipping origin
+
+**JSON Structure:**
+
+```json
+{
+  "success": true,
+  "product_id": "3256808016108411",
+  "title": "Product Title",
+  "price": { "sale_price": "$51.04", "currency": "USD" },
+  "rating": { "score": "5.0", "total_sold": "5 sold" },
+  "store": { "name": "Store Name", "rating": "44", "country": "US" },
+  "seller": {
+    "name": "Store Name",
+    "profile_picture": "https://...",
+    "profile_url": "https://...",
+    "rating": "89.0",
+    "total_reviews": "2156",
+    "country": "China"
+  },
+  "shipping": { "delivery_days_min": "2", "ship_from": "US" },
+  "images": ["https://..."],
+  "sku_options": [...]
+}
+```
 
 ```bash
 usage: cli.py [-h] [-u PRODUCT_URL] [-p PRODUCT_ID] [-c COOKIE_STRING]

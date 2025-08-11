@@ -9,17 +9,17 @@ from the mtop.aliexpress.pdp.pc.query API response.
 Core Available Fields (6/12):
 1. ✅ Seller Name - from SHOP_CARD_PC.storeName
 2. ✅ Seller Profile Picture - from SHOP_CARD_PC.logo
-3. ✅ Seller Profile URL - from SHOP_CARD_PC.storeHomePage  
+3. ✅ Seller Profile URL - from SHOP_CARD_PC.storeHomePage
 4. ✅ Seller Rating - from SHOP_CARD_PC.sellerScore
 5. ✅ Total Reviews - from SHOP_CARD_PC.sellerTotalNum
 6. ✅ Country - from SHOP_CARD_PC.sellerInfo.countryCompleteName
 
 Usage:
     from core_seller_extractor import CoreSellerExtractor
-    
+
     extractor = CoreSellerExtractor()
     seller_data = extractor.extract_core_seller_fields(api_response)
-    
+
     # Returns only the 6 available fields with clean data
     print(seller_data)
 
@@ -33,14 +33,14 @@ from typing import Any, Dict, Optional
 class CoreSellerExtractor:
     """
     Simple extractor focusing on the 6 core seller fields available in AliExpress API.
-    
+
     This class extracts only the confirmed available seller fields, providing
     clean, reliable data without N/A values or missing field placeholders.
     """
 
     def __init__(self):
         """Initialize the core seller extractor."""
-        
+
         # The 6 core available fields from mtop API
         self.core_fields = {
             "seller_name": "SHOP_CARD_PC.storeName",
@@ -52,9 +52,7 @@ class CoreSellerExtractor:
         }
 
     def extract_core_seller_fields(
-        self, 
-        api_response: Dict[str, Any],
-        include_metadata: bool = True
+        self, api_response: Dict[str, Any], include_metadata: bool = True
     ) -> Dict[str, Any]:
         """
         Extract the 6 core seller fields from API response.
@@ -76,7 +74,7 @@ class CoreSellerExtractor:
 
             # Extract the 6 core fields
             core_data = {}
-            
+
             # 1. Seller Name
             seller_name = shop_card_data.get("storeName")
             if seller_name:
@@ -121,9 +119,9 @@ class CoreSellerExtractor:
                     "extraction_success": True,
                     "fields_extracted": len(core_data),
                     "total_available_core_fields": 6,
-                    "extraction_rate": f"{len(core_data)/6*100:.1f}%",
+                    "extraction_rate": f"{len(core_data) / 6 * 100:.1f}%",
                     "api_source": "mtop.aliexpress.pdp.pc.query",
-                    "extracted_fields": list(core_data.keys())
+                    "extracted_fields": list(core_data.keys()),
                 }
 
             return core_data
@@ -134,15 +132,17 @@ class CoreSellerExtractor:
     def extract_seller_summary(self, api_response: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract a clean seller summary with just the essential information.
-        
+
         Args:
             api_response: Complete API response from mtop.aliexpress.pdp.pc.query
-            
+
         Returns:
             Dictionary with essential seller information in a clean format
         """
-        core_data = self.extract_core_seller_fields(api_response, include_metadata=False)
-        
+        core_data = self.extract_core_seller_fields(
+            api_response, include_metadata=False
+        )
+
         if not core_data:
             return {"error": "No seller data could be extracted"}
 
@@ -151,13 +151,13 @@ class CoreSellerExtractor:
             "seller_info": {},
             "contact_info": {},
             "reputation": {},
-            "available_fields": len(core_data)
+            "available_fields": len(core_data),
         }
 
         # Organize fields by category
         if "seller_name" in core_data:
             summary["seller_info"]["name"] = core_data["seller_name"]
-            
+
         if "country" in core_data:
             summary["contact_info"]["country"] = core_data["country"]
 
@@ -165,7 +165,9 @@ class CoreSellerExtractor:
             summary["contact_info"]["store_url"] = core_data["seller_profile_url"]
 
         if "seller_profile_picture" in core_data:
-            summary["seller_info"]["profile_picture"] = core_data["seller_profile_picture"]
+            summary["seller_info"]["profile_picture"] = core_data[
+                "seller_profile_picture"
+            ]
 
         if "seller_rating" in core_data:
             summary["reputation"]["rating"] = core_data["seller_rating"]
@@ -178,19 +180,21 @@ class CoreSellerExtractor:
     def get_field_mapping(self) -> Dict[str, str]:
         """
         Get the mapping of field names to their API source paths.
-        
+
         Returns:
             Dictionary mapping field names to API paths
         """
         return self.core_fields.copy()
 
-    def validate_extraction_quality(self, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_extraction_quality(
+        self, extracted_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Validate the quality of extracted seller data.
-        
+
         Args:
             extracted_data: Result from extract_core_seller_fields()
-            
+
         Returns:
             Dictionary with quality assessment
         """
@@ -199,13 +203,13 @@ class CoreSellerExtractor:
 
         metadata = extracted_data["extraction_metadata"]
         fields_extracted = metadata.get("fields_extracted", 0)
-        
+
         # Assess quality based on how many core fields were successfully extracted
         if fields_extracted >= 5:
             quality = "Excellent"
             message = f"Extracted {fields_extracted}/6 core fields"
         elif fields_extracted >= 4:
-            quality = "Good" 
+            quality = "Good"
             message = f"Extracted {fields_extracted}/6 core fields"
         elif fields_extracted >= 2:
             quality = "Fair"
@@ -219,10 +223,13 @@ class CoreSellerExtractor:
             "message": message,
             "extraction_rate": metadata.get("extraction_rate", "0%"),
             "missing_fields": [
-                field for field in self.core_fields.keys() 
+                field
+                for field in self.core_fields.keys()
                 if field not in extracted_data
             ],
-            "recommendation": "Use all available fields for best seller profiling" if quality in ["Excellent", "Good"] else "Consider alternative data sources for missing fields"
+            "recommendation": "Use all available fields for best seller profiling"
+            if quality in ["Excellent", "Good"]
+            else "Consider alternative data sources for missing fields",
         }
 
     def _validate_api_response(self, api_response: Dict[str, Any]) -> bool:
@@ -241,14 +248,14 @@ class CoreSellerExtractor:
             "extraction_metadata": {
                 "fields_extracted": 0,
                 "total_available_core_fields": 6,
-                "extraction_rate": "0%"
-            }
+                "extraction_rate": "0%",
+            },
         }
 
 
 def demo_core_extraction():
     """Demonstrate core seller field extraction with sample data."""
-    
+
     print("🎯 Core Seller Fields Demo")
     print("=" * 30)
     print()
@@ -264,9 +271,7 @@ def demo_core_extraction():
                         "storeHomePage": "https://m.aliexpress.com/store/storeHome.htm?sellerAdminSeq=123456789",
                         "sellerScore": "87.5",
                         "sellerTotalNum": "1247",
-                        "sellerInfo": {
-                            "countryCompleteName": "China"
-                        }
+                        "sellerInfo": {"countryCompleteName": "China"},
                     }
                 }
             }
@@ -275,49 +280,51 @@ def demo_core_extraction():
 
     # Initialize extractor and extract data
     extractor = CoreSellerExtractor()
-    
+
     print("🔍 Extracting core seller fields...")
     core_data = extractor.extract_core_seller_fields(sample_response)
-    
+
     print(f"✅ Extraction completed!")
-    print(f"Fields extracted: {core_data.get('extraction_metadata', {}).get('fields_extracted', 0)}/6")
+    print(
+        f"Fields extracted: {core_data.get('extraction_metadata', {}).get('fields_extracted', 0)}/6"
+    )
     print()
 
     print("📊 CORE SELLER DATA")
     print("-" * 25)
     for field, value in core_data.items():
         if field != "extraction_metadata":
-            display_field = field.replace('_', ' ').title()
+            display_field = field.replace("_", " ").title()
             # Truncate long URLs for display
             display_value = str(value)
             if len(display_value) > 60:
                 display_value = display_value[:57] + "..."
             print(f"  {display_field}: {display_value}")
-    
+
     print()
     print("📝 SELLER SUMMARY")
     print("-" * 20)
     summary = extractor.extract_seller_summary(sample_response)
-    
+
     if "seller_info" in summary:
         print("👤 Seller Info:")
         for key, value in summary["seller_info"].items():
             print(f"  • {key.title()}: {value}")
-            
+
     if "contact_info" in summary:
         print("📍 Contact Info:")
         for key, value in summary["contact_info"].items():
             if key == "store_url" and len(str(value)) > 50:
                 value = str(value)[:47] + "..."
             print(f"  • {key.replace('_', ' ').title()}: {value}")
-            
+
     if "reputation" in summary:
         print("⭐ Reputation:")
         for key, value in summary["reputation"].items():
             print(f"  • {key.replace('_', ' ').title()}: {value}")
 
     print()
-    
+
     # Quality assessment
     quality = extractor.validate_extraction_quality(core_data)
     print("🏆 EXTRACTION QUALITY")
@@ -326,8 +333,8 @@ def demo_core_extraction():
     print(f"Message: {quality['message']}")
     print(f"Rate: {quality['extraction_rate']}")
     print(f"Recommendation: {quality['recommendation']}")
-    
-    if quality.get('missing_fields'):
+
+    if quality.get("missing_fields"):
         print(f"Missing: {', '.join(quality['missing_fields'])}")
 
     print()

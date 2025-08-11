@@ -26,7 +26,11 @@ from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 # Import captcha solver if available
 try:
-    from captcha_solver import AliExpressCaptchaSolver, CaptchaSolverIntegration # type: ignore
+    from captcha_solver import (  # type: ignore
+        AliExpressCaptchaSolver,
+        CaptchaSolverIntegration,
+    )
+
     captcha_solver_available = True
 except ImportError:
     captcha_solver_available = False
@@ -235,85 +239,90 @@ class CookieGenerator:
         """)
 
         return context
-    
+
     def _detect_captcha_challenge(self, page: Page) -> bool:
         """
         Detect if a captcha challenge is present on the page.
-        
+
         Args:
             page: Playwright page object
-            
+
         Returns:
             True if captcha challenge is detected
         """
         try:
             # Check for common captcha indicators
             captcha_selectors = [
-                '.nc_iconfont.btn_slide',
-                '.btn_slide',
+                ".nc_iconfont.btn_slide",
+                ".btn_slide",
                 '[class*="nc_iconfont"]',
                 '[class*="btn_slide"]',
                 'span[data-nc-lang="SLIDE"]',
-                '.nc-lang-cnt',
+                ".nc-lang-cnt",
                 '[class*="captcha"]',
                 '[class*="slider"]',
                 '[class*="verify"]',
-                '.nc_wrapper',
-                '.nc_scale',
-                '.nc_scale_text'
+                ".nc_wrapper",
+                ".nc_scale",
+                ".nc_scale_text",
             ]
-            
+
             for selector in captcha_selectors:
                 if page.locator(selector).count() > 0:
                     print(f"🤖 Captcha challenge detected: {selector}")
                     return True
-            
+
             # Check page content for captcha indicators
             page_content = page.content()
             captcha_keywords = [
-                "captcha", "slider", "verify", "challenge", 
-                "unusual traffic", "security check", "bot"
+                "captcha",
+                "slider",
+                "verify",
+                "challenge",
+                "unusual traffic",
+                "security check",
+                "bot",
             ]
-            
+
             content_lower = page_content.lower()
             for keyword in captcha_keywords:
                 if keyword in content_lower:
                     print(f"🤖 Captcha keyword detected: {keyword}")
                     return True
-            
+
             return False
-            
+
         except Exception as e:
             print(f"⚠️ Error detecting captcha: {e}")
             return False
-    
+
     def _solve_captcha_challenge(self, page: Page, max_attempts: int = 3) -> bool:
         """
         Solve captcha challenge using the integrated captcha solver.
-        
+
         Args:
             page: Playwright page object
             max_attempts: Maximum attempts to solve the captcha
-            
+
         Returns:
             True if captcha was solved successfully
         """
         if not captcha_solver_available:
             print("⚠️ Captcha solver not available - cannot solve challenge")
             return False
-        
+
         print(f"🔄 Attempting to solve captcha challenge...")
-        
+
         try:
             # Use JavaScript to solve the slider captcha
             for attempt in range(max_attempts):
                 print(f"🎯 Captcha solving attempt {attempt + 1}/{max_attempts}")
-                
+
                 # Check if captcha is still present
                 if not self._detect_captcha_challenge(page):
                     print("✅ Captcha already solved!")
                     return True
-                
+
                 # Try to solve the slider captcha
                 success = page.evaluate("""
                     () => {
@@ -370,11 +379,11 @@ class CookieGenerator:
                         return true;
                     }
                 """)
-                
+
                 if success:
                     print("🎯 Slider moved, waiting for validation...")
                     time.sleep(3)  # Wait for validation
-                    
+
                     # Check if captcha was solved
                     if not self._detect_captcha_challenge(page):
                         print("✅ Captcha solved successfully!")
@@ -383,14 +392,14 @@ class CookieGenerator:
                         print("❌ Captcha still present after solving attempt")
                 else:
                     print("❌ Failed to move slider")
-                
+
                 # Wait before next attempt
                 if attempt < max_attempts - 1:
                     time.sleep(2)
-            
+
             print(f"❌ Failed to solve captcha after {max_attempts} attempts")
             return False
-            
+
         except Exception as e:
             print(f"❌ Error solving captcha: {e}")
             return False
@@ -432,12 +441,14 @@ class CookieGenerator:
                 if self._detect_captcha_challenge(page):
                     print("🤖 Bot challenge detected, attempting to solve...")
                     captcha_solved = self._solve_captcha_challenge(page)
-                    
+
                     if captcha_solved:
                         print("✅ Bot challenge solved, waiting for page to settle...")
                         time.sleep(3)  # Allow page to settle after solving
                     else:
-                        print("⚠️ Could not solve bot challenge, proceeding with available cookies...")
+                        print(
+                            "⚠️ Could not solve bot challenge, proceeding with available cookies..."
+                        )
 
                 # Try to wait for essential cookies
                 self._wait_for_essential_cookies(page, timeout=15)
@@ -457,18 +468,18 @@ class CookieGenerator:
                     "timestamp": time.time(),
                     "url": self.base_url,
                     "captcha_encountered": self._detect_captcha_challenge(page),
-                    "session_id": f"session_{int(time.time())}"  # Custom session identifier
+                    "session_id": f"session_{int(time.time())}",  # Custom session identifier
                 }
 
                 # Save to cache with enhanced metadata
                 self._save_session_cache(
                     cookie_string,
                     {
-                        "cookies_count": cookies_count, 
+                        "cookies_count": cookies_count,
                         "url": self.base_url,
                         "captcha_encountered": result["captcha_encountered"],
-                        "session_id": result["session_id"]
-                    }
+                        "session_id": result["session_id"],
+                    },
                 )
 
                 return result
@@ -487,47 +498,49 @@ class CookieGenerator:
     def is_session_expired(self, session_data: Optional[Dict[str, Any]] = None) -> bool:
         """
         Check if a session has expired based on custom timestamp validation.
-        
+
         Args:
             session_data: Session data to check, or None to load from cache
-            
+
         Returns:
             True if session is expired or invalid
         """
         if session_data is None:
             session_data = self._load_cached_session()
-        
+
         if not session_data:
             return True
-        
+
         # Check timestamp expiration
         cached_time = session_data.get("timestamp", 0)
         current_time = time.time()
-        
+
         if current_time - cached_time >= self.cache_validity_seconds:
             print(f"⏰ Session expired (age: {int(current_time - cached_time)}s)")
             return True
-        
+
         # Check if essential cookies are present
         cookies = session_data.get("cookies", "")
         validation = self.validate_cookies(cookies)
-        
+
         if not validation["valid"]:
-            print(f"🔍 Session cookies invalid: missing {validation['missing_essential']}")
+            print(
+                f"🔍 Session cookies invalid: missing {validation['missing_essential']}"
+            )
             return True
-        
+
         return False
-    
+
     def refresh_session_if_expired(self) -> Dict[str, Any]:
         """
         Check session and refresh if expired, opening https://www.aliexpress.us/ as needed.
-        
+
         Returns:
             Dictionary with session data and refresh status
         """
         # Load current session
         current_session = self._load_cached_session()
-        
+
         if current_session and not self.is_session_expired(current_session):
             print("✅ Current session is still valid")
             result: Dict[str, Any] = {
@@ -536,18 +549,18 @@ class CookieGenerator:
                 "refreshed": False,
                 "from_cache": True,
                 "timestamp": current_session.get("timestamp"),
-                "user_agent": current_session.get("user_agent", self.user_agent)
+                "user_agent": current_session.get("user_agent", self.user_agent),
             }
             # Add other fields from current session safely
             for key in ["cookies_count", "url", "session_id", "captcha_encountered"]:
                 if key in current_session:
                     result[key] = current_session[key]
             return result
-        
+
         # Session expired or invalid, generate fresh cookies
         print("🔄 Session expired, generating fresh cookies...")
         fresh_result = self.generate_fresh_cookies()
-        
+
         if fresh_result["success"]:
             fresh_result["refreshed"] = True
             fresh_result["from_cache"] = False
@@ -557,7 +570,7 @@ class CookieGenerator:
                 "success": False,
                 "error": fresh_result.get("error", "Unknown error"),
                 "refreshed": False,
-                "cookies": ""
+                "cookies": "",
             }
 
     def get_valid_cookies(self, force_refresh: bool = False) -> Dict[str, Any]:
@@ -577,7 +590,7 @@ class CookieGenerator:
             result = self.generate_fresh_cookies()
             result["from_cache"] = False
             return result
-        
+
         # Use enhanced session management with expiration checking
         return self.refresh_session_if_expired()
 
@@ -623,21 +636,21 @@ class CookieGenerator:
     def get_session_status(self) -> Dict[str, Any]:
         """
         Get current session status information.
-        
+
         Returns:
             Dictionary with session status details
         """
         current_session = self._load_cached_session()
-        
+
         if not current_session:
             return {
                 "has_session": False,
                 "expired": True,
-                "details": "No session file found"
+                "details": "No session file found",
             }
-        
+
         is_expired = self.is_session_expired(current_session)
-        
+
         return {
             "has_session": True,
             "expired": is_expired,
@@ -646,7 +659,7 @@ class CookieGenerator:
             "session_id": current_session.get("session_id"),
             "captcha_encountered": current_session.get("captcha_encountered", False),
             "cookies_count": current_session.get("cookies_count", 0),
-            "details": f"Session {'expired' if is_expired else 'valid'}"
+            "details": f"Session {'expired' if is_expired else 'valid'}",
         }
 
     def clear_cache(self) -> bool:
