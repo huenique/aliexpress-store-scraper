@@ -445,42 +445,56 @@ class AtomicBatchSellerProcessor:
             if batch_failures:
                 retry_count = 0
                 max_retries = 3
-                
+
                 # Check if this is a token expiration error that should prompt immediately
                 token_expired = critical_error and "TOKEN_EXPIRED" in critical_error
-                
+
+                print(f"❌ Batch {batch_num} failed - {critical_error}")
+
                 if token_expired:
-                    print(f"❌ Batch {batch_num} failed - token expired, prompting for new cookie")
+                    print(
+                        f"❌ Batch {batch_num} failed - token expired, prompting for new cookie"
+                    )
                 else:
                     print(f"❌ Batch {batch_num} failed - attempting retries")
-                    
+
                     # Retry logic for non-token errors
                     while retry_count < max_retries and batch_failures:
                         retry_count += 1
-                        print(f"🔄 Retry {retry_count}/{max_retries} for batch {batch_num}")
+                        print(
+                            f"🔄 Retry {retry_count}/{max_retries} for batch {batch_num}"
+                        )
                         time.sleep(2)  # Brief delay before retry
-                        
+
                         batch_results, batch_failures, critical_error = (
                             self._process_atomic_batch(batch)
                         )
-                        
+
                         if not batch_failures:
-                            print(f"✅ Batch {batch_num} succeeded on retry {retry_count}!")
+                            print(
+                                f"✅ Batch {batch_num} succeeded on retry {retry_count}!"
+                            )
                             break
                         elif critical_error and "TOKEN_EXPIRED" in critical_error:
-                            print(f"❌ Token expired on retry {retry_count}, will prompt for new cookie")
+                            print(
+                                f"❌ Token expired on retry {retry_count}, will prompt for new cookie"
+                            )
                             token_expired = True
                             break
                         else:
-                            print(f"❌ Retry {retry_count} failed for batch {batch_num}")
+                            print(
+                                f"❌ Retry {retry_count} failed for batch {batch_num}"
+                            )
 
                 # If still failed after retries or token expired, prompt for action
                 if batch_failures and (retry_count >= max_retries or token_expired):
                     if token_expired:
                         print(f"🍪 Token expired for batch {batch_num}")
                     else:
-                        print(f"❌ Batch {batch_num} failed after {max_retries} retries")
-                    
+                        print(
+                            f"❌ Batch {batch_num} failed after {max_retries} retries"
+                        )
+
                     # Prompt for action
                     while True:
                         action = input(
@@ -494,7 +508,9 @@ class AtomicBatchSellerProcessor:
                                 self._process_atomic_batch(batch)
                             )
                             if not batch_failures:
-                                print(f"✅ Batch {batch_num} succeeded with new cookie!")
+                                print(
+                                    f"✅ Batch {batch_num} succeeded with new cookie!"
+                                )
                                 break
                             else:
                                 print(
