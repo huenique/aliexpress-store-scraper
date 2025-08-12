@@ -18,12 +18,17 @@ Date: August 2025
 
 import hashlib
 import json
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 
 class AliExpressClient:
@@ -34,12 +39,15 @@ class AliExpressClient:
     using AliExpress's internal MTOP API with proper authentication and signatures.
     """
 
-    def __init__(self, base_url: str = "https://acs.aliexpress.us"):
+    def __init__(
+        self, base_url: str = "https://acs.aliexpress.us", use_proxy: bool = True
+    ):
         """
         Initialize the AliExpress client.
 
         Args:
             base_url: Base URL for API requests (default: https://acs.aliexpress.us)
+            use_proxy: Whether to use Oxylabs proxy configuration from environment
         """
         self.session = requests.Session()
         self.base_url = base_url.rstrip("/")
@@ -47,6 +55,26 @@ class AliExpressClient:
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
             "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         )
+
+        # Configure proxy if enabled and credentials available
+        if use_proxy:
+            self._configure_oxylabs_proxy()
+
+    def _configure_oxylabs_proxy(self):
+        """Configure Oxylabs residential proxy from environment variables"""
+        username = os.getenv("OXYLABS_USERNAME")
+        password = os.getenv("OXYLABS_PASSWORD")
+        endpoint = os.getenv("OXYLABS_ENDPOINT")
+
+        if username and password and endpoint:
+            proxy_url = f"http://{username}:{password}@{endpoint}"
+            self.session.proxies = {"http": proxy_url, "https": proxy_url}
+            print(f"🌐 Configured Oxylabs proxy: {endpoint}")
+        else:
+            print("⚠️  Oxylabs proxy credentials not found in environment variables")
+            print(
+                "   Add OXYLABS_USERNAME, OXYLABS_PASSWORD, and OXYLABS_ENDPOINT to .env file"
+            )
 
     def _md5_hash(self, text: str) -> str:
         """Generate MD5 hash exactly as AliExpress does."""

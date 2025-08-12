@@ -591,6 +591,11 @@ Manual cookie format example:
         default=1.0,
         help="Delay between batch requests in seconds (default: 1.0)",
     )
+    parser.add_argument(
+        "--no-proxy",
+        action="store_true",
+        help="Disable Oxylabs proxy usage",
+    )
 
     # Parse arguments
     args = parser.parse_args()
@@ -600,6 +605,7 @@ Manual cookie format example:
         cookie_cache_minutes=args.cache_minutes,
         auto_retry=True,
         headless_browser=not args.no_headless,
+        use_proxy=not args.no_proxy,
     )
 
     # Handle test automation

@@ -44,6 +44,7 @@ class EnhancedAliExpressClient(AliExpressClient):
         cookie_cache_minutes: int = 30,
         auto_retry: bool = True,
         headless_browser: bool = True,
+        use_proxy: bool = True,
     ):
         """
         Initialize the enhanced AliExpress client.
@@ -53,8 +54,9 @@ class EnhancedAliExpressClient(AliExpressClient):
             cookie_cache_minutes: How long to cache cookies (default: 30 minutes)
             auto_retry: Whether to retry with fresh cookies on failure
             headless_browser: Whether to run browser in headless mode
+            use_proxy: Whether to use Oxylabs proxy configuration from environment
         """
-        super().__init__(base_url)
+        super().__init__(base_url, use_proxy=use_proxy)
 
         self.auto_retry = auto_retry
         self.cookie_generator = CookieGenerator(
