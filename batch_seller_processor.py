@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Atomic Batch Seller Processor
-Processes products in atomic batches where all products in a batch succeed or fail together.
+Granular Batch Seller Processor
+Processes products in batches with granular retry logic. Successful products are saved immediately,
+and only failed products are retried individually to save bandwidth and improve efficiency.
 Uses ThreadPoolExecutor for concurrent processing with proper error handling.
 """
 
@@ -17,7 +18,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 
-class AtomicBatchSellerProcessor:
+class GranularBatchSellerProcessor:
     def __init__(
         self,
         input_file: str,
@@ -251,15 +252,15 @@ class AtomicBatchSellerProcessor:
         else:
             return product, "PARSE_ERROR: Could not parse seller data"
 
-    def _process_atomic_batch(
+    def _process_batch_with_individual_tracking(
         self, batch: List[Dict[str, Any]]
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Optional[str]]:
-        """Process a batch of products atomically"""
+        """Process a batch of products with individual result tracking"""
         batch_results: list[Dict[str, Any]] = []
         batch_errors: list[Dict[str, Any]] = []
         critical_error = None
 
-        print(f"🔄 Processing atomic batch of {len(batch)} products...")
+        print(f"🔄 Processing batch of {len(batch)} products...")
 
         with ThreadPoolExecutor(
             max_workers=min(self.max_workers, len(batch))
@@ -292,20 +293,35 @@ class AtomicBatchSellerProcessor:
                     critical_error = error_msg
                     batch_errors.append({"product": product, "error": error_msg})
 
-        # Atomic behavior: if any product failed, entire batch fails
-        if batch_errors:
-            return (
-                [],
-                batch
-                + [
-                    error["product"]
-                    for error in batch_errors
-                    if error["product"] not in batch
-                ],
-                critical_error,
-            )
+        # Return successful and failed products separately (non-atomic behavior)
+        failed_products = [error["product"] for error in batch_errors]
+        return batch_results, failed_products, critical_error
 
-        return batch_results, [], None
+    def _process_failed_products_individually(
+        self, failed_products: List[Dict[str, Any]]
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], Optional[str]]:
+        """Process failed products individually for retry"""
+        retry_results: List[Dict[str, Any]] = []
+        still_failed: List[Dict[str, Any]] = []
+        critical_error = None
+
+        print(f"🔄 Retrying {len(failed_products)} failed products individually...")
+
+        for product in failed_products:
+            product_id = product.get("Product ID", "")
+            print(f"🔄 Retrying Product ID: {product_id}")
+            
+            result, error = self._process_single_product_atomic(product)
+            
+            if error:
+                # Check for critical errors
+                if error.startswith(("TOKEN_EXPIRED", "VALIDATION_ERROR")):
+                    critical_error = error
+                still_failed.append(product)
+            else:
+                retry_results.append(result)
+
+        return retry_results, still_failed, critical_error
 
     def _process_and_save_batch_results(self, batch_results: List[Dict[str, Any]]):
         """Process and save successful batch results to CSV"""
@@ -344,8 +360,14 @@ class AtomicBatchSellerProcessor:
             else:
                 self._append_to_csv(product_data, None, "No Seller Data")
 
-            # Add to results
-            self.results.append(result)
+            # Add only seller data to results to match CSV structure
+            if seller_data:
+                self.results.append(seller_data)
+            else:
+                # Create empty seller record with default values if no seller data
+                empty_seller = {header: "null" for header in self.csv_headers}
+                empty_seller["seller_state"] = "Active"
+                self.results.append(empty_seller)
 
     def _append_to_csv(
         self,
@@ -409,8 +431,8 @@ class AtomicBatchSellerProcessor:
         print(f"   • CSV: {self.output_csv}")
         print(f"   • Failed: {self.failed_json} ({len(self.failed_products)} products)")
 
-    def process_all_atomic(self) -> None:
-        """Process all products using atomic batch processing"""
+    def process_all_granular(self) -> None:
+        """Process all products using granular batch processing with individual retries"""
         products: List[Dict[str, Any]] = self._load_products()
         if not products:
             return
@@ -420,12 +442,13 @@ class AtomicBatchSellerProcessor:
         failed = 0
         total_batches = (total + self.batch_size - 1) // self.batch_size
 
-        print(f"\n🚀 Starting atomic batch processing of {total} products...")
+        print(f"\n🚀 Starting granular batch processing of {total} products...")
         print(
             f"� Processing in batches of {self.batch_size} with {self.max_workers} workers"
         )
         print(f"�📊 Total batches: {total_batches}")
         print(f"📈 Progress will be streamed to: {self.output_csv}")
+        print(f"💡 Failed products will be retried individually to save bandwidth")
         print("-" * 60)
 
         # Process products in atomic batches
@@ -436,121 +459,152 @@ class AtomicBatchSellerProcessor:
             print(f"\n📦 Batch {batch_num}/{total_batches} ({len(batch)} products)")
             print("-" * 40)
 
-            # Process the atomic batch
-            batch_results, batch_failures, critical_error = self._process_atomic_batch(
+            # Process the batch
+            batch_results, batch_failures, critical_error = self._process_batch_with_individual_tracking(
                 batch
             )
 
-            # If batch failed, retry up to 3 times before prompting for new cookie
+            # Process successful results immediately
+            if batch_results:
+                self._process_and_save_batch_results(batch_results)
+                successful += len(batch_results)
+                print(
+                    f"✅ Processed {len(batch_results)} products successfully"
+                )
+
+            # Handle failed products with granular retries
             if batch_failures:
                 retry_count = 0
                 max_retries = 3
+                current_failures = batch_failures.copy()
 
                 # Check if this is a token expiration error that should prompt immediately
                 token_expired = critical_error and "TOKEN_EXPIRED" in critical_error
 
-                print(f"❌ Batch {batch_num} failed - {critical_error}")
+                print(f"⚠️  {len(current_failures)} products failed - {critical_error}")
 
                 if token_expired:
                     print(
-                        f"❌ Batch {batch_num} failed - token expired, prompting for new cookie"
+                        f"❌ Token expired, prompting for new cookie"
                     )
                 else:
-                    print(f"❌ Batch {batch_num} failed - attempting retries")
+                    print(f"🔄 Attempting granular retries for failed products")
 
-                    # Retry logic for non-token errors
-                    while retry_count < max_retries and batch_failures:
+                    # Retry failed products individually up to max_retries times
+                    while retry_count < max_retries and current_failures:
                         retry_count += 1
                         print(
-                            f"🔄 Retry {retry_count}/{max_retries} for batch {batch_num}"
+                            f"🔄 Retry {retry_count}/{max_retries} - processing {len(current_failures)} failed products"
                         )
                         time.sleep(2)  # Brief delay before retry
 
-                        batch_results, batch_failures, critical_error = (
-                            self._process_atomic_batch(batch)
+                        retry_results, still_failed, retry_critical_error = (
+                            self._process_failed_products_individually(current_failures)
                         )
 
-                        if not batch_failures:
+                        # Process any newly successful products immediately
+                        if retry_results:
+                            self._process_and_save_batch_results(retry_results)
+                            successful += len(retry_results)
                             print(
-                                f"✅ Batch {batch_num} succeeded on retry {retry_count}!"
+                                f"✅ Retry {retry_count} recovered {len(retry_results)} products!"
                             )
-                            break
-                        elif critical_error and "TOKEN_EXPIRED" in critical_error:
+
+                        # Update current failures
+                        current_failures = still_failed
+                        if retry_critical_error and "TOKEN_EXPIRED" in retry_critical_error:
                             print(
                                 f"❌ Token expired on retry {retry_count}, will prompt for new cookie"
                             )
+                            critical_error = retry_critical_error
                             token_expired = True
+                            break
+
+                        if not current_failures:
+                            print(
+                                f"✅ All products recovered after {retry_count} retries!"
+                            )
                             break
                         else:
                             print(
-                                f"❌ Retry {retry_count} failed for batch {batch_num}"
+                                f"⚠️  {len(current_failures)} products still failed after retry {retry_count}"
                             )
 
                 # If still failed after retries or token expired, prompt for action
-                if batch_failures and (retry_count >= max_retries or token_expired):
+                if current_failures and (retry_count >= max_retries or token_expired):
                     if token_expired:
-                        print(f"🍪 Token expired for batch {batch_num}")
+                        print(f"🍪 Token expired - {len(current_failures)} products still need processing")
                     else:
                         print(
-                            f"❌ Batch {batch_num} failed after {max_retries} retries"
+                            f"❌ {len(current_failures)} products failed after {max_retries} retries"
                         )
 
                     # Prompt for action
-                    while True:
+                    while current_failures:
                         action = input(
-                            f"\nBatch {batch_num} failed:\nChoose action:\n1. Update cookie and retry batch {batch_num}\n2. Skip batch {batch_num}\n3. Stop processing\nEnter choice (1/2/3): "
+                            f"\n{len(current_failures)} products failed:\nChoose action:\n1. Update cookie and retry failed products\n2. Skip remaining failed products\n3. Stop processing\nEnter choice (1/2/3): "
                         ).strip()
 
                         if action == "1":
                             self._prompt_for_new_cookie()
-                            print(f"🔄 Retrying batch {batch_num} with new cookie...")
-                            batch_results, batch_failures, critical_error = (
-                                self._process_atomic_batch(batch)
+                            print(f"🔄 Retrying {len(current_failures)} failed products with new cookie...")
+                            retry_results, current_failures, critical_error = (
+                                self._process_failed_products_individually(current_failures)
                             )
-                            if not batch_failures:
+                            if retry_results:
+                                self._process_and_save_batch_results(retry_results)
+                                successful += len(retry_results)
                                 print(
-                                    f"✅ Batch {batch_num} succeeded with new cookie!"
+                                    f"✅ Recovered {len(retry_results)} products with new cookie!"
+                                )
+                            if not current_failures:
+                                print(
+                                    f"✅ All products recovered with new cookie!"
                                 )
                                 break
                             else:
                                 print(
-                                    f"❌ Batch {batch_num} still failed - try a different cookie or skip"
+                                    f"❌ {len(current_failures)} products still failed - try a different cookie or skip"
                                 )
                                 continue
                         elif action == "2":
-                            print(f"⏩ Skipping batch {batch_num}")
-                            batch_results = []
-                            batch_failures = batch
+                            print(f"⏩ Skipping {len(current_failures)} failed products")
                             break
                         elif action == "3":
                             print("🛑 Stopping processing")
+                            # Add remaining failures to failed_products list
+                            for failed_product in current_failures:
+                                self.failed_products.append(
+                                    {
+                                        "product": failed_product,
+                                        "error": "Processing stopped by user",
+                                        "batch_num": batch_num,
+                                        "critical_error": critical_error,
+                                    }
+                                )
                             self._save_results()
                             return
                         else:
                             print("⚠️  Invalid choice. Please enter 1, 2, or 3.")
 
-            # Process successful results
-            if batch_results:
-                self._process_and_save_batch_results(batch_results)
-                successful += len(batch_results)
+                # Add any remaining failed products to the final failed list
+                if current_failures:
+                    for failed_product in current_failures:
+                        self.failed_products.append(
+                            {
+                                "product": failed_product,
+                                "error": "Failed after retries",
+                                "batch_num": batch_num,
+                                "critical_error": critical_error,
+                            }
+                        )
+                    failed += len(current_failures)
+                    print(
+                        f"❌ {len(current_failures)} products could not be recovered"
+                    )
+            else:
                 print(
                     f"✅ Batch {batch_num} completed successfully: {len(batch_results)} products"
-                )
-
-            # Process failed results
-            if batch_failures:
-                for failed_product in batch_failures:
-                    self.failed_products.append(
-                        {
-                            "product": failed_product,
-                            "error": "Batch failed atomically",
-                            "batch_num": batch_num,
-                            "critical_error": critical_error,
-                        }
-                    )
-                failed += len(batch_failures)
-                print(
-                    f"❌ Batch {batch_num} failed atomically: {len(batch_failures)} products"
                 )
 
             # Small delay between batches
@@ -562,33 +616,36 @@ class AtomicBatchSellerProcessor:
 
         # Print summary
         print("\n" + "=" * 60)
-        print("🎯 ATOMIC BATCH PROCESSING COMPLETE")
+        print("🎯 GRANULAR BATCH PROCESSING COMPLETE")
         print("=" * 60)
         print(f"Total Products: {total}")
         print(f"✅ Successful: {successful}")
         print(f"❌ Failed: {failed}")
         print(f"� Total Batches: {total_batches}")
         print(f"📈 Success Rate: {(successful / total) * 100:.1f}%")
+        print(f"💡 Only failed products were retried, saving bandwidth")
         print("=" * 60)
 
 
 def main() -> None:
+    default_task = os.cpu_count() or 2
+
     parser = argparse.ArgumentParser(
-        description="Atomic batch process products for seller extraction"
+        description="Granular batch process products for seller extraction with individual retries"
     )
     parser.add_argument("input_file", help="Input JSON file with products")
     parser.add_argument("--cookie", help="Cookie string for authentication")
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=10,
-        help="Number of products to process in each atomic batch (default: 10)",
+        default=default_task,
+        help="Number of products to process in each batch (default: CPU cores)",
     )
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=5,
-        help="Maximum number of concurrent workers per batch (default: 5)",
+        default=default_task,
+        help="Maximum number of concurrent workers per batch (default: CPU cores)",
     )
 
     args = parser.parse_args()
@@ -597,13 +654,13 @@ def main() -> None:
         print(f"❌ Input file not found: {args.input_file}")
         sys.exit(1)
 
-    processor = AtomicBatchSellerProcessor(
+    processor = GranularBatchSellerProcessor(
         args.input_file,
         args.cookie,
         batch_size=args.batch_size,
         max_workers=args.max_workers,
     )
-    processor.process_all_atomic()
+    processor.process_all_granular()
 
 
 if __name__ == "__main__":
