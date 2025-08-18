@@ -1,0 +1,52 @@
+{
+  "summary": {
+    "total_processed": 2,
+    "successful_extractions": 2,
+    "processing_timestamp": 1755557651.804729
+  },
+  "results": [
+    {
+      "image_id": "1104270332_1104270332_certificate_1",
+      "status": "success",
+      "processing_time": 11.822343826293945,
+      "error": null,
+      "contact_info": {
+        "emails": [
+          "ddnkbO1@gmail.com"
+        ],
+        "phone_numbers": [
+          "6478825897"
+        ],
+        "addresses": [
+          "United States Florida Miami 382 NE 191ST ST #30327 33179",
+          "382 NE 191ST ST"
+        ],
+        "company_name": null,
+        "registration_number": null,
+        "confidence_score": 0.8
+      }
+    },
+    {
+      "image_id": "1104718035_1104718035_certificate_1",
+      "status": "success",
+      "processing_time": 12.15959358215332,
+      "error": null,
+      "contact_info": {
+        "emails": [
+          "zenithsparkOO7@outlook.com"
+        ],
+        "phone_numbers": [
+          "1850595833",
+          "18505958334"
+        ],
+        "addresses": [
+          "27 Mariposa St",
+          "United States Colorado Hartsel 27 Mariposa St 80449"
+        ],
+        "company_name": null,
+        "registration_number": null,
+        "confidence_score": 0.8
+      }
+    }
+  ]
+}
