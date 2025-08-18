@@ -1,7 +1,7 @@
 
 # AliExpress Product & Seller Scraper
 
-This project provides a fully reverse-engineered AliExpress client with **automated cookie generation** and **focused seller field extraction**. It interacts directly with AliExpress's internal MTOP API to extract comprehensive product data and core seller information.
+This project provides a fully reverse-engineered AliExpress client with **automated cookie generation**, **focused seller field extraction**, and **store credentials scraping**. It interacts directly with AliExpress's internal MTOP API to extract comprehensive product data and core seller information, plus dedicated store credential page scraping.
 
 ## 🎯 Key Features
 
@@ -20,6 +20,15 @@ This project provides a fully reverse-engineered AliExpress client with **automa
 - Complete product data extraction: title, price, ratings, store info, shipping, variants, images, and more
 - **Automatic seller field extraction**: 6 core seller fields included in every product response
 - Seller data: name, profile picture, profile URL, rating, total reviews, country
+
+### 🏪 **Store Credentials Scraping**
+
+- **NEW**: Headless browser scraping of store credential pages
+- Optimized performance with CSS and media disabled (HTML/JS only)
+- Batch processing of multiple store IDs
+- Configurable delays and retry logic
+- Comprehensive error handling and progress tracking
+- Support for `https://shoprenderview.aliexpress.com/credential/showcredential.htm?storeNum={store_id}`
 
 ### 💻 **User-Friendly Interface**
 
@@ -233,6 +242,51 @@ If automation doesn't work, you can still use manual cookies:
 python enhanced_cli.py --product-id 3256809096800275 --cookie "your_cookie_here"
 ```
 
+### 🏪 **Store Credentials Usage Examples**
+
+NEW: Dedicated store credential page scraping using optimized headless browser:
+
+```bash
+# Scrape single store credentials
+python store_credentials_cli.py --store-ids "1234567890"
+
+# Batch scrape multiple stores
+python store_credentials_cli.py --store-ids "123456,789012,345678"
+
+# From file (one store ID per line)
+python store_credentials_cli.py --file store_ids.txt
+
+# With custom output and settings
+python store_credentials_network_cli.py --store-ids "123,456" --output results.json --delay 3.0
+```
+
+**Python Library Usage:**
+
+```python
+from store_credentials_network_scraper import StoreCredentialsNetworkScraper
+
+# Network-based scraping with API interception
+async with StoreCredentialsNetworkScraper() as scraper:
+    results = await scraper.scrape_stores(["123456", "789012"])
+    
+    # Process results with network data and base64 certificate images
+    for result in results:
+        if result["status"] == "success":
+            print(f"Store {result['store_id']}: {len(result['images'])} certificates found")
+            # Access network data, certificate images, API responses, etc.
+            for image_key, image_data in result["images"].items():
+                print(f"Certificate: {image_key} - Format: {image_data['format']}")
+```
+
+**Features:**
+
+- Network request interception: Captures underlying API calls with base64 certificate data
+- CAPTCHA solving: Automated slider CAPTCHA detection and solving with stealth techniques  
+- Resource optimization: Blocks unnecessary resources while allowing CAPTCHA CSS
+- Batch processing with progress tracking and comprehensive error handling
+- Base64 image extraction: Automatically detects and extracts certificate images from API responses
+- Format detection: Identifies image formats (JPEG, PNG, etc.) from base64 magic numbers
+
 ## 📁 Project Structure
 
 **Core Files:**
@@ -242,12 +296,18 @@ python enhanced_cli.py --product-id 3256809096800275 --cookie "your_cookie_here"
 - `core_seller_extractor.py` - Focused seller field extraction (6 available fields)
 - `cookie_generator.py` - Playwright-based cookie automation
 - `captcha_solver.py` - Basic captcha handling
+- `store_credentials_network_scraper.py` - Network-based certificate scraper with API interception
 
 **CLI Tools:**
 
 - `enhanced_cli.py` - Main CLI with automation
 - `core_seller_cli.py` - Seller field extraction CLI
+- `store_credentials_network_cli.py` - Network-based certificate scraping CLI with CAPTCHA handling
 - `cli.py` - Original CLI (manual cookies)
+
+**Examples & Tests:**
+
+- `debug_captcha.py` - CAPTCHA debugging and testing utilities
 
 **Documentation:**
 

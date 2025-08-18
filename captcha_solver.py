@@ -1,223 +1,34 @@
 #!/usr/bin/env python3
 """
-AliExpress Captcha Solver Module
-Uses advanced techniques to automatically solve AliExpress captchas
-Adapted from French programmer's solution with enhanced integration capabilities
+AliExpress Advanced Captcha Solver
+Based on proven French implementation with enhanced slider solving
 """
 
 import asyncio
 import random
-import time
-from typing import Any
 
-from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+from playwright.async_api import Page
 
 from logger import ScraperLogger
 
 
-class AliExpressCaptchaSolver:
-    """Specialized captcha solver for AliExpress"""
+class AdvancedCaptchaSolver:
+    """Advanced CAPTCHA solver with robust slider detection and solving"""
 
-    def __init__(
-        self, headless: bool = True, proxy_config: dict[str, str] | None = None
-    ):
-        """
-        Initialize the captcha solver
+    def __init__(self, page: Page):
+        self.page = page
+        self.logger = ScraperLogger("AdvancedCaptchaSolver")
 
-        Args:
-            headless: Whether to run browser in headless mode
-            proxy_config: Optional proxy configuration dict with keys: server, username, password
-        """
-        self.headless = headless
-        self.proxy_config = proxy_config
-        self.browser: Browser | None = None
-        self.context: BrowserContext | None = None
-        self.page: Page | None = None
-        self.playwright = None
-        self.logger = ScraperLogger("Core.CaptchaSolver")
-
-    async def start_browser(self) -> None:
-        """Start the browser with optimized configuration"""
-        if self.browser:
-            return  # Already started
-
-        self.playwright = await async_playwright().start()
-
-        # Browser args optimized for captcha solving
-        browser_args = [
-            "--no-sandbox",
-            "--disable-blink-features=AutomationControlled",
-            "--disable-dev-shm-usage",
-            "--disable-web-security",
-            "--disable-features=VizDisplayCompositor",
-            "--disable-extensions",
-            "--disable-plugins",
-            "--excludeSwitches=enable-automation",
-            "--useAutomationExtension=false",
-        ]
-
-        self.browser = await self.playwright.chromium.launch(
-            headless=self.headless, args=browser_args
-        )
-
-        # Context configuration
-        context_options: dict[str, Any] = {
-            "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "viewport": {"width": 1920, "height": 1080},
-            "locale": "en-US",
-            "timezone_id": "America/New_York",
-        }
-
-        # Add proxy configuration if provided
-        if self.proxy_config:
-            context_options["proxy"] = self.proxy_config
-
-        self.context = await self.browser.new_context(**context_options)
-        self.page = await self.context.new_page()
-
-        # Hide automation indicators
-        await self.page.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined,
-            });
-            
-            Object.defineProperty(navigator, 'plugins', {
-                get: () => [1, 2, 3, 4, 5],
-            });
-            
-            Object.defineProperty(navigator, 'languages', {
-                get: () => ['en-US', 'en'],
-            });
-            
-            window.chrome = {
-                runtime: {},
-            };
-        """)
-
-    async def close(self) -> None:
-        """Clean browser shutdown"""
-        if self.page:
-            await self.page.close()
-        if self.context:
-            await self.context.close()
-        if self.browser:
-            await self.browser.close()
-        if self.playwright:
-            await self.playwright.stop()
-
-    async def human_like_delay(
-        self, min_delay: float = 2.0, max_delay: float = 5.0
-    ) -> None:
-        """Random delay to simulate human behavior"""
-        delay = random.uniform(min_delay, max_delay)
-        await asyncio.sleep(delay)
-
-    async def solve_captcha_on_url(
-        self, url: str, max_attempts: int = 5
-    ) -> tuple[bool, dict[str, Any]]:
-        """
-        Navigate to URL and solve any captcha encountered
-
-        Args:
-            url: The URL to navigate to
-            max_attempts: Maximum number of captcha solving attempts
-
-        Returns:
-            Tuple of (success, session_data) where session_data contains cookies and user_agent
-        """
-        if not self.page:
-            await self.start_browser()
-
-        if not self.page:
-            return False, {}
-
+    async def detect_and_solve_captcha(self) -> bool:
+        """Detect and solve AliExpress slider captchas automatically"""
         try:
-            self.logger.info("Navigating to URL", url)
-            await self.page.goto(url, wait_until="domcontentloaded")
-            await self.human_like_delay(3, 6)
+            # Wait for captcha to load
+            await asyncio.sleep(2)
 
-            # Handle cookie consent
-            await self._handle_cookie_consent()
-
-            # Captcha solving loop
-            captcha_attempts = 0
-
-            while captcha_attempts < max_attempts:
-                # Check if we're on a valid page (products visible)
-                if await self._is_on_products_page():
-                    self.logger.success("Products page detected - no captcha needed!")
-                    break
-
-                # Check for captcha
-                if await self._is_captcha_present():
-                    self.logger.warning(
-                        "Captcha detected",
-                        f"attempt {captcha_attempts + 1}/{max_attempts}",
-                    )
-
-                    success = await self._solve_slide_captcha()
-                    captcha_attempts += 1
-
-                    if success:
-                        self.logger.success("Captcha solved successfully!")
-                        await asyncio.sleep(3)
-
-                        if await self._is_on_products_page():
-                            self.logger.success("Products now visible!")
-                            break
-                        else:
-                            self.logger.info("Products not yet visible, retrying...")
-                            await asyncio.sleep(2)
-                    else:
-                        self.logger.warning(
-                            "Captcha solving failed",
-                            f"attempt {captcha_attempts}/{max_attempts}",
-                        )
-                        await asyncio.sleep(2)
-                else:
-                    self.logger.info("Waiting for page to load...")
-                    await asyncio.sleep(2)
-
-            # Extract session data
-            session_data = await self._extract_session_data()
-
-            success = (
-                captcha_attempts < max_attempts or await self._is_on_products_page()
-            )
-
-            return success, session_data
-
-        except Exception as e:
-            self.logger.error("Error during captcha solving", str(e))
-            return False, {}
-
-    async def _handle_cookie_consent(self) -> None:
-        """Handle cookie consent banner"""
-        if not self.page:
-            return
-
-        try:
-            # Wait for potential cookie banner with short timeout
-            cookie_button = await self.page.wait_for_selector(
-                '[data-ae-cookie-policy-accept], .btn-accept, [class*="cookie"] button',
-                timeout=5000,
-            )
-            if cookie_button:
-                await cookie_button.click()
-                self.logger.info("Cookie consent accepted")
-                await asyncio.sleep(1)
-        except:
-            # No cookie banner found, continue
-            pass
-
-    async def _is_captcha_present(self) -> bool:
-        """Detects the presence of a captcha on the page"""
-        if not self.page:
-            return False
-
-        try:
-            return await self.page.evaluate("""
+            # Check if captcha is present
+            captcha_present = await self.page.evaluate("""
                 () => {
+                    // Look for AliExpress specific captcha elements
                     const captchaSelectors = [
                         '.nc_iconfont.btn_slide',
                         '.btn_slide',
@@ -241,7 +52,7 @@ class AliExpressCaptchaSolver:
                         }
                     }
                     
-                    // Check in iframes
+                    // Check inside iframes
                     const iframes = document.querySelectorAll('iframe');
                     for (const iframe of iframes) {
                         try {
@@ -259,66 +70,107 @@ class AliExpressCaptchaSolver:
                     return false;
                 }
             """)
+
+            if not captcha_present:
+                self.logger.info("✅ No captcha detected")
+                return True
+
+            self.logger.info("🛡️ Captcha detected! Attempting automatic resolution...")
+
+            # Wait for complete loading
+            await asyncio.sleep(3)
+
+            # Try to solve with multiple methods
+            success = await self.solve_slide_captcha()
+
+            if not success:
+                self.logger.info("🔄 Trying with maximum distance...")
+                success = await self.solve_captcha_with_max_distance()
+
+            if success:
+                self.logger.success("✅ Captcha solved successfully!")
+                await asyncio.sleep(2)
+                return True
+            else:
+                self.logger.error("❌ Failed to solve captcha automatically")
+                return False
+
         except Exception as e:
-            self.logger.warning("Error checking for captcha", str(e))
+            self.logger.error(f"⚠️ Error during captcha detection: {str(e)}")
             return False
 
-    async def _is_on_products_page(self) -> bool:
-        """Checks if we are on a valid products page"""
-        if not self.page:
-            return False
-
+    async def solve_slide_captcha(self) -> bool:
+        """Solve slider captcha with robust approach"""
         try:
-            return await self.page.evaluate("""
+            # Get detailed captcha information
+            captcha_info = await self.page.evaluate("""
                 () => {
-                    // Check for product links
-                    const productLinks = document.querySelectorAll('a[href*="item"]');
-                    if (productLinks.length > 3) {
-                        return true;
-                    }
+                    // First try main page
+                    let slider = document.querySelector('.nc_iconfont.btn_slide') ||
+                                document.querySelector('.btn_slide') ||
+                                document.querySelector('[class*="nc_iconfont"]') ||
+                                document.querySelector('[class*="btn_slide"]');
                     
-                    // Check for product containers
-                    const productContainers = document.querySelectorAll(
-                        '[class*="product"], [class*="item"], [class*="card"], [data-spm*="item"]'
-                    );
-                    if (productContainers.length > 3) {
-                        return true;
-                    }
+                    let container = null;
                     
-                    // Check for product images
-                    const productImages = document.querySelectorAll('img[src*="ae-pic"], img[src*="alicdn"]');
-                    if (productImages.length > 5) {
-                        return true;
+                    // If not found in main page, check iframes
+                    if (!slider) {
+                        const iframes = document.querySelectorAll('iframe');
+                        for (const iframe of iframes) {
+                            try {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (iframeDoc) {
+                                    slider = iframeDoc.querySelector('.nc_iconfont.btn_slide') ||
+                                            iframeDoc.querySelector('.btn_slide') ||
+                                            iframeDoc.querySelector('[class*="nc_iconfont"]') ||
+                                            iframeDoc.querySelector('[class*="btn_slide"]') ||
+                                            iframeDoc.querySelector('.nc-container .nc-btn') ||
+                                            iframeDoc.querySelector('.slidetounlock') ||
+                                            iframeDoc.querySelector('[class*="slide"]') ||
+                                            iframeDoc.querySelector('.captcha-slider');
+                                    
+                                    if (slider) {
+                                        // Get iframe position to adjust coordinates
+                                        const iframeRect = iframe.getBoundingClientRect();
+                                        const sliderRect = slider.getBoundingClientRect();
+                                        
+                                        // Find container in iframe
+                                        container = slider.closest('.nc-container') ||
+                                                  slider.closest('.nc_scale') ||
+                                                  slider.closest('[class*="slider"]') ||
+                                                  slider.closest('.captcha-container') ||
+                                                  slider.parentElement;
+                                        
+                                        const containerRect = container ? container.getBoundingClientRect() : sliderRect;
+                                        
+                                        return {
+                                            sliderLeft: iframeRect.left + sliderRect.left,
+                                            sliderTop: iframeRect.top + sliderRect.top,
+                                            sliderWidth: sliderRect.width,
+                                            sliderHeight: sliderRect.height,
+                                            containerLeft: iframeRect.left + containerRect.left,
+                                            containerWidth: containerRect.width,
+                                            currentLeft: parseFloat(slider.style.left || '0'),
+                                            isInIframe: true,
+                                            iframe: iframe
+                                        };
+                                    }
+                                }
+                            } catch (e) {
+                                // Ignore iframe access errors
+                                console.log('Iframe access error:', e);
+                            }
+                        }
                     }
-                    
-                    return false;
-                }
-            """)
-        except Exception as e:
-            self.logger.warning("Error checking products page", str(e))
-            return False
-
-    async def _solve_slide_captcha(self) -> bool:
-        """Solves a slider-type captcha"""
-        if not self.page:
-            return False
-
-        try:
-            # Get slider information
-            slider_info = await self.page.evaluate("""
-                () => {
-                    const slider = document.querySelector('.nc_iconfont.btn_slide') ||
-                                  document.querySelector('.btn_slide') ||
-                                  document.querySelector('[class*="nc_iconfont"]') ||
-                                  document.querySelector('[class*="btn_slide"]');
                     
                     if (!slider) {
                         return null;
                     }
                     
-                    const container = slider.closest('[class*="nc_scale"]') || 
-                                    slider.closest('[class*="slider"]') ||
-                                    slider.parentElement;
+                    // Find captcha container in main page
+                    container = slider.closest('[class*="nc_scale"]') || 
+                              slider.closest('[class*="slider"]') ||
+                              slider.parentElement;
                     
                     const sliderRect = slider.getBoundingClientRect();
                     const containerRect = container ? container.getBoundingClientRect() : sliderRect;
@@ -329,53 +181,54 @@ class AliExpressCaptchaSolver:
                         sliderWidth: sliderRect.width,
                         sliderHeight: sliderRect.height,
                         containerLeft: containerRect.left,
-                        containerWidth: containerRect.width
+                        containerWidth: containerRect.width,
+                        currentLeft: parseFloat(slider.style.left || '0'),
+                        isInIframe: false
                     };
                 }
             """)
 
-            if not slider_info:
-                print("❌ Slider not found")
+            if not captcha_info:
+                self.logger.error("❌ Slider information not found")
                 return False
 
-            print(
-                f"🎯 Slider found at position ({slider_info['sliderLeft']:.0f}, {slider_info['sliderTop']:.0f})"
+            self.logger.info(
+                f"🎯 Slider found: position=({captcha_info['sliderLeft']:.0f}, {captcha_info['sliderTop']:.0f}), width={captcha_info['sliderWidth']:.0f}"
+            )
+            self.logger.info(
+                f"📏 Container: width={captcha_info['containerWidth']:.0f}"
             )
 
-            # Calculate slide distance (go to the end)
-            slide_distance = slider_info["containerWidth"] * 0.95  # 95% to be safe
+            # Calculate slide distance (go completely to the end)
+            slide_distance = (
+                captcha_info["containerWidth"] * 1.0
+            )  # 100% - go completely to the end
 
             # Start position (center of slider)
-            start_x = slider_info["sliderLeft"] + slider_info["sliderWidth"] / 2
-            start_y = slider_info["sliderTop"] + slider_info["sliderHeight"] / 2
+            start_x = captcha_info["sliderLeft"] + captcha_info["sliderWidth"] / 2
+            start_y = captcha_info["sliderTop"] + captcha_info["sliderHeight"] / 2
 
             # End position
             end_x = start_x + slide_distance
 
-            print(
+            self.logger.info(
                 f"🖱️ Sliding from ({start_x:.0f}, {start_y:.0f}) to ({end_x:.0f}, {start_y:.0f}) - Distance: {slide_distance:.0f}px"
             )
 
-            # Perform the slide with human-like movement
-            if not self.page:
-                return False
-
+            # Perform sliding with natural approach
             await self.page.mouse.move(start_x, start_y)
             await asyncio.sleep(0.2)
 
-            # Mouse down
+            # Press mouse button
             await self.page.mouse.down()
             await asyncio.sleep(0.1)
 
-            # Progressive sliding with natural acceleration/deceleration
+            # Progressive sliding with acceleration/deceleration
             steps = 25
             for i in range(1, steps + 1):
-                if not self.page:
-                    return False
-
                 progress = i / steps
 
-                # Natural easing curve
+                # Natural acceleration curve (slow start, fast middle, slow end)
                 if progress < 0.3:
                     ease = progress * progress * 2.5  # Acceleration
                 elif progress > 0.7:
@@ -389,23 +242,13 @@ class AliExpressCaptchaSolver:
                 await self.page.mouse.move(current_x, current_y)
                 await asyncio.sleep(random.uniform(0.015, 0.025))
 
-            # Mouse up
+            # Release mouse button
             await self.page.mouse.up()
             await asyncio.sleep(1.5)
 
             # Check if captcha was solved
             captcha_solved = await self.page.evaluate("""
                 () => {
-                    // Check if captcha container disappeared
-                    const captchaContainer = document.querySelector('[class*="nc_scale"]') ||
-                                           document.querySelector('[class*="captcha"]') ||
-                                           document.querySelector('[class*="slider"]');
-                    
-                    if (!captchaContainer || captchaContainer.style.display === 'none') {
-                        return true;
-                    }
-                    
-                    // Check if slider moved significantly
                     const slider = document.querySelector('.nc_iconfont.btn_slide') ||
                                   document.querySelector('.btn_slide') ||
                                   document.querySelector('[class*="nc_iconfont"]') ||
@@ -414,15 +257,31 @@ class AliExpressCaptchaSolver:
                     if (slider) {
                         const style = window.getComputedStyle(slider);
                         const left = parseFloat(style.left);
+                        
+                        // If slider moved significantly
                         if (left > 10) {
                             return true;
                         }
-                    }
-                    
-                    // Check if products are visible
-                    const productLinks = document.querySelectorAll('a[href*="item"]');
-                    if (productLinks.length > 3) {
-                        return true;
+                        
+                        // Check if text changed
+                        const slideText = document.querySelector('.nc-lang-cnt');
+                        if (slideText && !slideText.textContent.includes('verifier')) {
+                            return true;
+                        }
+                        
+                        // Check if captcha disappeared
+                        const captchaContainer = document.querySelector('[class*="nc_scale"]') ||
+                                               document.querySelector('[class*="captcha"]') ||
+                                               document.querySelector('[class*="slider"]');
+                        if (!captchaContainer || captchaContainer.style.display === 'none') {
+                            return true;
+                        }
+                        
+                        // Check if products are visible (success indicator)
+                        const productLinks = document.querySelectorAll('a[href*="item"]');
+                        if (productLinks.length > 0) {
+                            return true;
+                        }
                     }
                     
                     return false;
@@ -430,24 +289,22 @@ class AliExpressCaptchaSolver:
             """)
 
             if captcha_solved:
-                print("✅ Slide successful!")
+                self.logger.success("✅ Sliding successful!")
                 return True
             else:
-                print("❌ Slide failed, trying alternative method...")
-                return await self._solve_captcha_alternative()
+                self.logger.warning("❌ Sliding failed, trying improved approach...")
+                return await self.retry_slide_captcha_improved()
 
         except Exception as e:
-            self.logger.warning("Error solving slide captcha", str(e))
+            self.logger.error(f"⚠️ Error solving captcha: {str(e)}")
             return False
 
-    async def _solve_captcha_alternative(self) -> bool:
-        """Alternative captcha solving method using JavaScript injection"""
-        if not self.page:
-            return False
-
+    async def retry_slide_captcha_improved(self) -> bool:
+        """Retry with different approach"""
         try:
-            print("🔄 Trying JavaScript injection method...")
+            self.logger.info("🔄 Retry with JavaScript approach...")
 
+            # Use more direct JavaScript approach
             success = await self.page.evaluate("""
                 () => {
                     const slider = document.querySelector('.nc_iconfont.btn_slide') ||
@@ -468,7 +325,7 @@ class AliExpressCaptchaSolver:
                     }
                     
                     const containerWidth = container.offsetWidth || container.clientWidth;
-                    const targetLeft = containerWidth * 0.98;  // 98% for safety
+                    const targetLeft = containerWidth * 0.98;  // 98% for retry
                     
                     // Simulate movement by changing style
                     slider.style.left = targetLeft + 'px';
@@ -476,7 +333,7 @@ class AliExpressCaptchaSolver:
                     // Trigger necessary events
                     const rect = slider.getBoundingClientRect();
                     
-                    // Mouse down event
+                    // Mousedown
                     const downEvent = new MouseEvent('mousedown', {
                         clientX: rect.x + 5,
                         clientY: rect.y + rect.height / 2,
@@ -485,7 +342,7 @@ class AliExpressCaptchaSolver:
                     });
                     slider.dispatchEvent(downEvent);
                     
-                    // Mouse up event after delay
+                    // Wait then trigger mouseup
                     setTimeout(() => {
                         const upEvent = new MouseEvent('mouseup', {
                             clientX: rect.x + targetLeft,
@@ -503,7 +360,97 @@ class AliExpressCaptchaSolver:
             if success:
                 await asyncio.sleep(2)
 
-                # Verify solution
+                # Check again
+                captcha_solved = await self.page.evaluate("""
+                    () => {
+                        const slider = document.querySelector('.nc_iconfont.btn_slide') ||
+                                      document.querySelector('.btn_slide') ||
+                                      document.querySelector('[class*="nc_iconfont"]') ||
+                                      document.querySelector('[class*="btn_slide"]');
+                        
+                        if (slider) {
+                            const style = window.getComputedStyle(slider);
+                            const left = parseFloat(style.left);
+                            return left > 10;
+                        }
+                        
+                        return false;
+                    }
+                """)
+
+                if captcha_solved:
+                    return True
+                else:
+                    # Third attempt: slide completely to the end
+                    self.logger.info("🔄 Third attempt: complete sliding...")
+                    return await self.final_slide_attempt()
+
+            return False
+
+        except Exception as e:
+            self.logger.error(f"⚠️ Error during retry: {str(e)}")
+            return False
+
+    async def final_slide_attempt(self) -> bool:
+        """Final attempt: slide completely to the end"""
+        try:
+            # Slide completely to the end
+            success = await self.page.evaluate("""
+                () => {
+                    const slider = document.querySelector('.nc_iconfont.btn_slide') ||
+                                  document.querySelector('.btn_slide') ||
+                                  document.querySelector('[class*="nc_iconfont"]') ||
+                                  document.querySelector('[class*="btn_slide"]');
+                    
+                    if (!slider) {
+                        return false;
+                    }
+                    
+                    const container = slider.closest('[class*="nc_scale"]') || 
+                                    slider.closest('[class*="slider"]') ||
+                                    slider.parentElement;
+                    
+                    if (!container) {
+                        return false;
+                    }
+                    
+                    const containerWidth = container.offsetWidth || container.clientWidth;
+                    const targetLeft = containerWidth;  // 100% - go completely to the end
+                    
+                    // Simulate movement by changing style
+                    slider.style.left = targetLeft + 'px';
+                    
+                    // Trigger necessary events
+                    const rect = slider.getBoundingClientRect();
+                    
+                    // Mousedown
+                    const downEvent = new MouseEvent('mousedown', {
+                        clientX: rect.x + 5,
+                        clientY: rect.y + rect.height / 2,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    slider.dispatchEvent(downEvent);
+                    
+                    // Wait then trigger mouseup
+                    setTimeout(() => {
+                        const upEvent = new MouseEvent('mouseup', {
+                            clientX: rect.x + targetLeft,
+                            clientY: rect.y + rect.height / 2,
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        document.dispatchEvent(upEvent);
+                    }, 500);
+                    
+                    return true;
+                }
+            """)
+
+            if success:
+                await asyncio.sleep(2)
+
+                # Check again
                 captcha_solved = await self.page.evaluate("""
                     () => {
                         const slider = document.querySelector('.nc_iconfont.btn_slide') ||
@@ -526,137 +473,170 @@ class AliExpressCaptchaSolver:
             return False
 
         except Exception as e:
-            print(f"⚠️ Error in alternative captcha solving: {str(e)}")
+            self.logger.error(f"⚠️ Error during final attempt: {str(e)}")
             return False
 
-    async def _extract_session_data(self) -> dict[str, Any]:
-        """Extract cookies and user agent from current session"""
+    async def solve_captcha_with_max_distance(self) -> bool:
+        """Solve captcha by sliding with maximum distance"""
         try:
-            # Get cookies
-            if not self.context:
-                return {}
-            cookies_list = await self.context.cookies()
-            cookies = {
-                cookie["name"]: cookie["value"]
-                for cookie in cookies_list
-                if "name" in cookie and "value" in cookie
-            }
+            self.logger.info("🎯 Trying with maximum distance...")
 
-            # Get user agent
-            if not self.page:
-                return {"cookies": cookies}
-            user_agent = await self.page.evaluate("() => navigator.userAgent")
+            # Get slider information with iframe support
+            slider_info = await self.page.evaluate("""
+                () => {
+                    // First try main page
+                    let slider = document.querySelector('.nc_iconfont.btn_slide') ||
+                                document.querySelector('.btn_slide') ||
+                                document.querySelector('[class*="nc_iconfont"]') ||
+                                document.querySelector('[class*="btn_slide"]');
+                    
+                    let container = null;
+                    
+                    // If not found in main page, check iframes
+                    if (!slider) {
+                        const iframes = document.querySelectorAll('iframe');
+                        for (const iframe of iframes) {
+                            try {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (iframeDoc) {
+                                    slider = iframeDoc.querySelector('.nc_iconfont.btn_slide') ||
+                                            iframeDoc.querySelector('.btn_slide') ||
+                                            iframeDoc.querySelector('[class*="nc_iconfont"]') ||
+                                            iframeDoc.querySelector('[class*="btn_slide"]') ||
+                                            iframeDoc.querySelector('.nc-container .nc-btn') ||
+                                            iframeDoc.querySelector('.slidetounlock') ||
+                                            iframeDoc.querySelector('[class*="slide"]') ||
+                                            iframeDoc.querySelector('.captcha-slider');
+                                    
+                                    if (slider) {
+                                        // Get iframe position to adjust coordinates
+                                        const iframeRect = iframe.getBoundingClientRect();
+                                        const sliderRect = slider.getBoundingClientRect();
+                                        
+                                        container = slider.closest('.nc-container') ||
+                                                  slider.closest('.nc_scale') ||
+                                                  slider.closest('[class*="slider"]') ||
+                                                  slider.closest('.captcha-container') ||
+                                                  slider.parentElement;
+                                        
+                                        const containerRect = container ? container.getBoundingClientRect() : sliderRect;
+                                        
+                                        return {
+                                            sliderLeft: iframeRect.left + sliderRect.left,
+                                            sliderTop: iframeRect.top + sliderRect.top,
+                                            sliderWidth: sliderRect.width,
+                                            sliderHeight: sliderRect.height,
+                                            containerLeft: iframeRect.left + containerRect.left,
+                                            containerWidth: containerRect.width,
+                                            isInIframe: true
+                                        };
+                                    }
+                                }
+                            } catch (e) {
+                                // Ignore iframe access errors
+                            }
+                        }
+                    }
+                    
+                    if (!slider) {
+                        return null;
+                    }
+                    
+                    container = slider.closest('[class*="nc_scale"]') || 
+                              slider.closest('[class*="slider"]') ||
+                              slider.parentElement;
+                    
+                    const sliderRect = slider.getBoundingClientRect();
+                    const containerRect = container ? container.getBoundingClientRect() : sliderRect;
+                    
+                    return {
+                        sliderLeft: sliderRect.left,
+                        sliderTop: sliderRect.top,
+                        sliderWidth: sliderRect.width,
+                        sliderHeight: sliderRect.height,
+                        containerLeft: containerRect.left,
+                        containerWidth: containerRect.width,
+                        isInIframe: false
+                    };
+                }
+            """)
 
-            return {
-                "cookies": cookies,
-                "user_agent": user_agent,
-                "timestamp": time.time(),
-            }
+            if not slider_info:
+                return False
+
+            # Start position (center of slider)
+            start_x = slider_info["sliderLeft"] + slider_info["sliderWidth"] / 2
+            start_y = slider_info["sliderTop"] + slider_info["sliderHeight"] / 2
+
+            # End position (completely to the right of container)
+            end_x = (
+                slider_info["containerLeft"] + slider_info["containerWidth"] + 50
+            )  # 50px extra to be sure
+
+            self.logger.info(
+                f"🖱️ Maximum slide from ({start_x:.0f}, {start_y:.0f}) to ({end_x:.0f}, {start_y:.0f})"
+            )
+
+            # Perform sliding with Playwright
+            await self.page.mouse.move(start_x, start_y)
+            await asyncio.sleep(0.2)
+
+            # Press button
+            await self.page.mouse.down()
+            await asyncio.sleep(0.1)
+
+            # Progressive sliding to the end
+            steps = 30
+            for i in range(1, steps + 1):
+                progress = i / steps
+                current_x = start_x + (end_x - start_x) * progress
+                current_y = start_y + random.uniform(-2, 2)  # Slight variation
+
+                await self.page.mouse.move(current_x, current_y)
+                await asyncio.sleep(random.uniform(0.02, 0.03))
+
+            # Release button
+            await self.page.mouse.up()
+            await asyncio.sleep(2)
+
+            # Check if captcha was solved
+            captcha_solved = await self.page.evaluate("""
+                () => {
+                    // Check if captcha disappeared
+                    const captchaContainer = document.querySelector('[class*="nc_scale"]') ||
+                                           document.querySelector('[class*="captcha"]') ||
+                                           document.querySelector('[class*="slider"]');
+                    
+                    if (!captchaContainer || captchaContainer.style.display === 'none') {
+                        return true;
+                    }
+                    
+                    // Check if products are visible
+                    const productLinks = document.querySelectorAll('a[href*="item"]');
+                    if (productLinks.length > 0) {
+                        return true;
+                    }
+                    
+                    // Check if slider moved
+                    const slider = document.querySelector('.nc_iconfont.btn_slide') ||
+                                  document.querySelector('.btn_slide') ||
+                                  document.querySelector('[class*="nc_iconfont"]') ||
+                                  document.querySelector('[class*="btn_slide"]');
+                    
+                    if (slider) {
+                        const style = window.getComputedStyle(slider);
+                        const left = parseFloat(style.left);
+                        if (left > 50) {  // If slider moved significantly
+                            return true;
+                        }
+                    }
+                    
+                    return false;
+                }
+            """)
+
+            return captcha_solved
 
         except Exception as e:
-            print(f"⚠️ Error extracting session data: {str(e)}")
-            return {}
-
-
-class CaptchaSolverIntegration:
-    """Integration helper for captcha solver with existing scraper"""
-
-    @staticmethod
-    def should_use_captcha_solver(html_content: str) -> bool:
-        """
-        Determine if captcha solver should be used based on page content
-
-        Args:
-            html_content: HTML content to analyze
-
-        Returns:
-            True if captcha solving is needed
-        """
-        captcha_indicators = [
-            "captcha",
-            "nc_iconfont",
-            "btn_slide",
-            "slider",
-            "verify",
-            "security",
-            "challenge",
-        ]
-
-        html_lower = html_content.lower()
-        return any(indicator in html_lower for indicator in captcha_indicators)
-
-    @staticmethod
-    async def solve_captcha_and_get_session(
-        url: str,
-        proxy_config: dict[str, str] | None = None,
-        headless: bool = True,
-        max_attempts: int = 5,
-    ) -> tuple[bool, dict[str, Any]]:
-        """
-        Convenience method to solve captcha and get session data
-
-        Args:
-            url: URL to navigate to and solve captcha
-            proxy_config: Optional proxy configuration
-            headless: Whether to run browser in headless mode
-            max_attempts: Maximum captcha solving attempts
-
-        Returns:
-            Tuple of (success, session_data)
-        """
-        solver = AliExpressCaptchaSolver(headless=headless, proxy_config=proxy_config)
-
-        try:
-            success, session_data = await solver.solve_captcha_on_url(url, max_attempts)
-            return success, session_data
-        finally:
-            await solver.close()
-
-
-# Async context manager for easier usage
-class CaptchaSolverContext:
-    """Async context manager for captcha solver"""
-
-    def __init__(
-        self, headless: bool = True, proxy_config: dict[str, str] | None = None
-    ):
-        self.solver = AliExpressCaptchaSolver(
-            headless=headless, proxy_config=proxy_config
-        )
-
-    async def __aenter__(self):
-        await self.solver.start_browser()
-        return self.solver
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        await self.solver.close()
-
-
-def main():
-    """Example usage"""
-
-    async def test_captcha_solver():
-        test_url = "https://www.aliexpress.com/w/wholesale-mechanical-keyboard.html"
-
-        (
-            success,
-            session_data,
-        ) = await CaptchaSolverIntegration.solve_captcha_and_get_session(
-            url=test_url,
-            headless=False,  # Set to False to see the browser in action
-            max_attempts=3,
-        )
-
-        if success:
-            print("✅ Captcha solving successful!")
-            print(f"📊 Extracted {len(session_data.get('cookies', {}))} cookies")
-            print(f"🔧 User agent: {session_data.get('user_agent', '')[:50]}...")
-        else:
-            print("❌ Captcha solving failed")
-
-    # Run test
-    asyncio.run(test_captcha_solver())
-
-
-if __name__ == "__main__":
-    main()
+            self.logger.error(f"⚠️ Error during maximum distance attempt: {str(e)}")
+            return False

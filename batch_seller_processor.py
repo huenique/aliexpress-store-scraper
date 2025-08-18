@@ -310,9 +310,9 @@ class GranularBatchSellerProcessor:
         for product in failed_products:
             product_id = product.get("Product ID", "")
             print(f"🔄 Retrying Product ID: {product_id}")
-            
+
             result, error = self._process_single_product_atomic(product)
-            
+
             if error:
                 # Check for critical errors
                 if error.startswith(("TOKEN_EXPIRED", "VALIDATION_ERROR")):
@@ -460,17 +460,15 @@ class GranularBatchSellerProcessor:
             print("-" * 40)
 
             # Process the batch
-            batch_results, batch_failures, critical_error = self._process_batch_with_individual_tracking(
-                batch
+            batch_results, batch_failures, critical_error = (
+                self._process_batch_with_individual_tracking(batch)
             )
 
             # Process successful results immediately
             if batch_results:
                 self._process_and_save_batch_results(batch_results)
                 successful += len(batch_results)
-                print(
-                    f"✅ Processed {len(batch_results)} products successfully"
-                )
+                print(f"✅ Processed {len(batch_results)} products successfully")
 
             # Handle failed products with granular retries
             if batch_failures:
@@ -484,9 +482,7 @@ class GranularBatchSellerProcessor:
                 print(f"⚠️  {len(current_failures)} products failed - {critical_error}")
 
                 if token_expired:
-                    print(
-                        f"❌ Token expired, prompting for new cookie"
-                    )
+                    print(f"❌ Token expired, prompting for new cookie")
                 else:
                     print(f"🔄 Attempting granular retries for failed products")
 
@@ -512,7 +508,10 @@ class GranularBatchSellerProcessor:
 
                         # Update current failures
                         current_failures = still_failed
-                        if retry_critical_error and "TOKEN_EXPIRED" in retry_critical_error:
+                        if (
+                            retry_critical_error
+                            and "TOKEN_EXPIRED" in retry_critical_error
+                        ):
                             print(
                                 f"❌ Token expired on retry {retry_count}, will prompt for new cookie"
                             )
@@ -533,7 +532,9 @@ class GranularBatchSellerProcessor:
                 # If still failed after retries or token expired, prompt for action
                 if current_failures and (retry_count >= max_retries or token_expired):
                     if token_expired:
-                        print(f"🍪 Token expired - {len(current_failures)} products still need processing")
+                        print(
+                            f"🍪 Token expired - {len(current_failures)} products still need processing"
+                        )
                     else:
                         print(
                             f"❌ {len(current_failures)} products failed after {max_retries} retries"
@@ -547,9 +548,13 @@ class GranularBatchSellerProcessor:
 
                         if action == "1":
                             self._prompt_for_new_cookie()
-                            print(f"🔄 Retrying {len(current_failures)} failed products with new cookie...")
+                            print(
+                                f"🔄 Retrying {len(current_failures)} failed products with new cookie..."
+                            )
                             retry_results, current_failures, critical_error = (
-                                self._process_failed_products_individually(current_failures)
+                                self._process_failed_products_individually(
+                                    current_failures
+                                )
                             )
                             if retry_results:
                                 self._process_and_save_batch_results(retry_results)
@@ -558,9 +563,7 @@ class GranularBatchSellerProcessor:
                                     f"✅ Recovered {len(retry_results)} products with new cookie!"
                                 )
                             if not current_failures:
-                                print(
-                                    f"✅ All products recovered with new cookie!"
-                                )
+                                print(f"✅ All products recovered with new cookie!")
                                 break
                             else:
                                 print(
@@ -568,7 +571,9 @@ class GranularBatchSellerProcessor:
                                 )
                                 continue
                         elif action == "2":
-                            print(f"⏩ Skipping {len(current_failures)} failed products")
+                            print(
+                                f"⏩ Skipping {len(current_failures)} failed products"
+                            )
                             break
                         elif action == "3":
                             print("🛑 Stopping processing")
@@ -599,9 +604,7 @@ class GranularBatchSellerProcessor:
                             }
                         )
                     failed += len(current_failures)
-                    print(
-                        f"❌ {len(current_failures)} products could not be recovered"
-                    )
+                    print(f"❌ {len(current_failures)} products could not be recovered")
             else:
                 print(
                     f"✅ Batch {batch_num} completed successfully: {len(batch_results)} products"
