@@ -11,7 +11,9 @@ Available commands:
 - enhanced: Use enhanced CLI with automated cookies
 - seller: Extract seller/store information
 - store-network: Scrape store credentials and network data
+- populate-sellers: Populate seller data for products in JSON file
 - unified-pipeline: Complete seller info pipeline (credentials + OCR contact extraction)
+- brand-to-seller: Complete pipeline from brand scan to seller contact info
 """
 
 import argparse
@@ -152,6 +154,49 @@ def main():
         "--dry-run", action="store_true", help="Show what would be processed"
     )
 
+    # Brand-to-seller complete pipeline
+    brand_parser = subparsers.add_parser(
+        "brand-to-seller",
+        help="Complete pipeline: brand scan → seller info → contact extraction",
+    )
+    brand_parser.add_argument(
+        "brand_scan_file",
+        help="Brand scan JSON file (e.g., nike_100.json) with Product URLs",
+    )
+    brand_parser.add_argument(
+        "--output",
+        help="Output file for complete results (default: <input>_seller_contact_info.json)",
+    )
+    brand_parser.add_argument(
+        "--proxy",
+        action="store_true",
+        help="Use proxy for requests (requires OXYLABS_* environment variables)",
+    )
+    brand_parser.add_argument(
+        "--delay",
+        type=float,
+        default=2.0,
+        help="Delay between requests during seller population (default: 2.0)",
+    )
+    brand_parser.add_argument(
+        "--retry-delay",
+        type=float,
+        default=3.0,
+        help="Delay between retry attempts (default: 3.0)",
+    )
+    brand_parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=3,
+        help="Maximum retry attempts for failed seller extractions (default: 3)",
+    )
+    brand_parser.add_argument("--cookie", help="Manual cookie string for API requests")
+    brand_parser.add_argument(
+        "--no-intermediates",
+        action="store_true",
+        help="Don't save intermediate results (seller data, credentials, OCR)",
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -241,6 +286,31 @@ def main():
             sys.argv.append("--dry-run")
         populate_main()
 
+    elif args.command == "brand-to-seller":
+        import asyncio
+
+        from aliexpress_store_scraper.processors.brand_to_seller_pipeline import (
+            main as brand_main,
+        )
+
+        # Reconstruct sys.argv for the brand-to-seller pipeline
+        sys.argv = ["brand_to_seller_pipeline.py", args.brand_scan_file]
+        if args.output:
+            sys.argv.extend(["--output", args.output])
+        if args.proxy:
+            sys.argv.append("--proxy")
+        if args.delay:
+            sys.argv.extend(["--delay", str(args.delay)])
+        if args.retry_delay:
+            sys.argv.extend(["--retry-delay", str(args.retry_delay)])
+        if args.max_retries:
+            sys.argv.extend(["--max-retries", str(args.max_retries)])
+        if args.cookie:
+            sys.argv.extend(["--cookie", args.cookie])
+        if args.no_intermediates:
+            sys.argv.append("--no-intermediates")
+        asyncio.run(brand_main())
+
     elif args.command == "unified-pipeline":
         import asyncio
 
@@ -264,6 +334,8 @@ def main():
             sys.argv.append("--no-ocr-preprocessing")
         if args.no_intermediate_files:
             sys.argv.append("--no-intermediate-files")
+        if args.proxy:
+            sys.argv.append("--proxy")
         if args.verbose:
             sys.argv.append("--verbose")
         if args.quiet:

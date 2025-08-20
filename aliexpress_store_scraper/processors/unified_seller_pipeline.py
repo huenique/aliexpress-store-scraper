@@ -483,8 +483,14 @@ class UnifiedSellerPipeline:
                 # Convert OCR results to JSON-serializable format
                 ocr_json_results = []
                 for result in ocr_results:
+                    # Extract store_id from image_id (format: "storeId_storeId_certificate_N")
+                    store_id = (
+                        result.image_id.split("_")[0] if result.image_id else None
+                    )
+
                     json_result = {
                         "image_id": result.image_id,
+                        "store_id": store_id,
                         "status": result.status,
                         "processing_time": result.processing_time,
                         "error": result.error,
@@ -619,8 +625,14 @@ class UnifiedSellerPipeline:
                 # Convert OCR results to JSON-serializable format
                 ocr_json_results = []
                 for result in ocr_results:
+                    # Extract store_id from image_id (format: "storeId_storeId_certificate_N")
+                    store_id = (
+                        result.image_id.split("_")[0] if result.image_id else None
+                    )
+
                     json_result = {
                         "image_id": result.image_id,
+                        "store_id": store_id,
                         "status": result.status,
                         "processing_time": result.processing_time,
                         "error": result.error,

@@ -15,6 +15,7 @@ Features:
 """
 
 import argparse
+import asyncio
 import json
 import sys
 import time
@@ -50,6 +51,114 @@ def extract_product_id_from_url(url: str) -> Optional[str]:
             return match.group(1)
 
     return None
+
+
+async def get_seller_data_for_product_async(
+    product_url: str,
+    client: EnhancedAliExpressClient,
+    extractor: CoreSellerExtractor,
+    manual_cookie: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Get seller data for a single product (async version).
+
+    Returns:
+        Dict with seller data or error information
+    """
+    try:
+        # Extract product ID from URL
+        product_id = extract_product_id_from_url(product_url)
+        if not product_id:
+            return {"error": f"Could not extract product ID from URL: {product_url}"}
+
+        print(f"🔍 Processing Product ID: {product_id}")
+
+        # Get API response
+        if manual_cookie:
+            api_result = client.call_api(
+                cookie_string=manual_cookie,
+                api="mtop.aliexpress.pdp.pc.query",
+                data={
+                    "productId": product_id,
+                    "_lang": "en_US",
+                    "_currency": "USD",
+                    "country": "US",
+                    "province": "922878890000000000",
+                    "city": "922878897869000000",
+                    "channel": "",
+                    "pdp_ext_f": "",
+                    "pdpNPI": "",
+                    "sourceType": "",
+                    "clientType": "pc",
+                    "ext": json.dumps(
+                        {
+                            "foreverRandomToken": "1b30c08e93b84668bac6ea9a4e750a45",
+                            "site": "usa",
+                            "crawler": False,
+                            "x-m-biz-bx-region": "",
+                            "signedIn": True,
+                            "host": "www.aliexpress.us",
+                        }
+                    ),
+                },
+            )
+        else:
+            # Use automated cookies (async version)
+            product_result = await client.get_product_with_auto_cookies_async(
+                product_id
+            )
+            if not product_result.get("success"):
+                return {
+                    "error": f"Failed to get product: {product_result.get('error')}"
+                }
+
+            # Get fresh cookies and make API call
+            cookie_result = await client._get_valid_cookies_async()
+            if not cookie_result["success"]:
+                return {"error": f"Failed to get cookies: {cookie_result.get('error')}"}
+
+            api_result = client.call_api(
+                cookie_string=cookie_result["cookies"],
+                api="mtop.aliexpress.pdp.pc.query",
+                data={
+                    "productId": product_id,
+                    "_lang": "en_US",
+                    "_currency": "USD",
+                    "country": "US",
+                    "province": "922878890000000000",
+                    "city": "922878897869000000",
+                    "channel": "",
+                    "pdp_ext_f": "",
+                    "pdpNPI": "",
+                    "sourceType": "",
+                    "clientType": "pc",
+                    "ext": json.dumps(
+                        {
+                            "foreverRandomToken": "1b30c08e93b84668bac6ea9a4e750a45",
+                            "site": "usa",
+                            "crawler": False,
+                            "x-m-biz-bx-region": "",
+                            "signedIn": True,
+                            "host": "www.aliexpress.us",
+                        }
+                    ),
+                },
+            )
+
+        # Extract seller data from API response
+        seller_data = extractor.extract_core_seller_fields(api_result)
+
+        if seller_data.get("extraction_metadata", {}).get("extraction_success"):
+            return {
+                "success": True,
+                "seller_data": seller_data,
+                "product_id": product_id,
+            }
+        else:
+            return {"error": "Failed to extract seller data from API response"}
+
+    except Exception as e:
+        return {"error": f"Exception occurred: {str(e)}"}
 
 
 def get_seller_data_for_product(
@@ -232,6 +341,76 @@ def find_failed_products(products: List[Dict[str, Any]]) -> List[int]:
     return failed_indices
 
 
+async def populate_initial_seller_data_async(
+    products: List[Dict[str, Any]],
+    client: EnhancedAliExpressClient,
+    extractor: CoreSellerExtractor,
+    manual_cookie: Optional[str] = None,
+    delay: float = 1.0,
+) -> tuple[List[Dict[str, Any]], int, int]:
+    """
+    Populate seller data for all products (async version).
+
+    Returns:
+        Tuple of (updated_products, success_count, error_count)
+    """
+    updated_products = []
+    success_count = 0
+    error_count = 0
+
+    for i, product in enumerate(products):
+        product_url = product.get("Product URL")
+
+        print(
+            f"[{i + 1}/{len(products)}] Processing: {product.get('Product ID', 'Unknown')}"
+        )
+
+        if not product_url:
+            print(f"  ❌ No Product URL found")
+            updated_products.append(product)
+            error_count += 1
+            continue
+
+        # Check if seller data is already populated
+        if (
+            product.get("Store Name")
+            and product.get("Store Name") != "null"
+            and product.get("Store Name") is not None
+        ):
+            print(f"  ✅ Seller data already exists, skipping")
+            updated_products.append(product)
+            success_count += 1
+            continue
+
+        # Get seller data
+        result = await get_seller_data_for_product_async(
+            product_url, client, extractor, manual_cookie
+        )
+
+        if result.get("success"):
+            # Update product with seller data
+            updated_product = update_product_with_seller_data(
+                product, result["seller_data"]
+            )
+            updated_products.append(updated_product)
+            success_count += 1
+
+            store_name = result["seller_data"].get("seller_name", "Unknown")
+            print(f"  ✅ Success: {store_name}")
+        else:
+            # Keep original product if extraction failed
+            updated_products.append(product)
+            error_count += 1
+            error = result.get("error", "Unknown error")
+            print(f"  ❌ Error: {error}")
+
+        # Add delay between requests to be respectful
+        if i < len(products) - 1:  # Don't delay after the last item
+            await asyncio.sleep(delay)
+
+    return updated_products, success_count, error_count
+
+
 def populate_initial_seller_data(
     products: List[Dict[str, Any]],
     client: EnhancedAliExpressClient,
@@ -296,6 +475,95 @@ def populate_initial_seller_data(
         # Add delay between requests to be respectful
         if i < len(products):  # Don't delay after the last item
             time.sleep(delay)
+
+    return updated_products, success_count, error_count
+
+
+async def retry_failed_seller_data_async(
+    products: List[Dict[str, Any]],
+    client: EnhancedAliExpressClient,
+    extractor: CoreSellerExtractor,
+    manual_cookie: Optional[str] = None,
+    delay: float = 2.0,
+    max_retries: int = 3,
+) -> tuple[List[Dict[str, Any]], int, int]:
+    """
+    Retry seller data extraction for failed products (async version).
+
+    Returns:
+        (updated_products, success_count, error_count)
+    """
+    failed_indices = find_failed_products(products)
+
+    if not failed_indices:
+        print("🎉 Great! All products already have seller data - nothing to retry")
+        return products, 0, 0
+
+    print(f"🔍 Found {len(failed_indices)} products needing retry:")
+    for i, idx in enumerate(failed_indices[:5]):  # Show first 5
+        product = products[idx]
+        print(
+            f"  [{i + 1}] {product.get('Product ID', 'Unknown')} - {product.get('Title', 'Unknown')[:50]}..."
+        )
+
+    if len(failed_indices) > 5:
+        print(f"  ... and {len(failed_indices) - 5} more")
+
+    print()
+    print("🚀 Starting retry process...")
+    print("-" * 50)
+
+    success_count = 0
+    error_count = 0
+    updated_products = products.copy()
+
+    for i, failed_idx in enumerate(failed_indices, 1):
+        product = products[failed_idx]
+        product_url = product.get("Product URL")
+        product_id = product.get("Product ID")
+
+        print(f"[{i}/{len(failed_indices)}] Retrying: {product_id}")
+
+        if not product_url:
+            print(f"  ⚠️  No Product URL found, skipping")
+            error_count += 1
+            continue
+
+        # Retry with multiple attempts
+        retry_success = False
+        for attempt in range(max_retries):
+            if attempt > 0:
+                print(f"  🔄 Retry attempt {attempt + 1}/{max_retries}")
+                await asyncio.sleep(delay * 2)  # Longer delay for retries
+
+            # Get seller data
+            result = await get_seller_data_for_product_async(
+                product_url, client, extractor, manual_cookie
+            )
+
+            if result.get("success"):
+                # Update product with seller data
+                updated_product = update_product_with_seller_data(
+                    product, result["seller_data"]
+                )
+                updated_products[failed_idx] = updated_product
+                success_count += 1
+
+                store_name = result["seller_data"].get("seller_name", "Unknown")
+                print(f"  ✅ Success: {store_name}")
+                retry_success = True
+                break
+            else:
+                error = result.get("error", "Unknown error")
+                print(f"  ❌ Attempt {attempt + 1} failed: {error}")
+
+        if not retry_success:
+            error_count += 1
+            print(f"  ❌ Failed after {max_retries} attempts")
+
+        # Add delay between different products
+        if i < len(failed_indices):
+            await asyncio.sleep(delay)
 
     return updated_products, success_count, error_count
 

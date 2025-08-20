@@ -1,6 +1,6 @@
 {
-  "saved_at": "2025-08-20 07:20:07 UTC",
-  "timestamp": 1755674407,
+  "saved_at": "2025-08-20 11:58:42 UTC",
+  "timestamp": 1755691122,
   "cookies": [
     {
       "name": "arms_uid",
@@ -27,7 +27,7 @@
       "value": "x_l=0&acs_rt=00191b20aac848a1abd8c4beb9a4e25d",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1790234395.542137,
+      "expires": 1790251107.352895,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
@@ -83,76 +83,76 @@
       "sameSite": "None"
     },
     {
+      "name": "cna",
+      "value": "hK0pIdRYBEICAWIVyLLfL2eR",
+      "domain": ".mmstat.com",
+      "path": "/",
+      "expires": 1790251110.077924,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
       "name": "cbc",
-      "value": "T2gAAtZ3MU4msXwBHgmBWwNmjxi3PC-CkhmxOrrjGWftcK_5lBmt6Iv7GulwlUoAte0=",
+      "value": "T2gARJv5khT7Vd3bcht_ZuVsTq5l-26TxzqiFSxQMuCSpfLxbeMXLZfnuNyObT9sYi0=",
       "domain": ".ynuf.aliapp.org",
       "path": "/",
-      "expires": 1787206775.334164,
+      "expires": 1787227013.179063,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "x5sec",
-      "value": "7b22617365727665722d696e746c3b33223a22307c435050526c635547454b3738364f67434d4f476f73386348222c22733b32223a2261663238323735373863613664613466227d",
+      "value": "7b22617365727665722d696e746c3b33223a22307c43506a766c735547454e4b67344f62362f2f2f2f2f7745773461697a7877633d222c22733b32223a2266666135323862643039336334623865227d",
       "domain": "acs.aliexpress.com",
       "path": "/",
-      "expires": 1755677971.651414,
+      "expires": 1755698200.813071,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "_m_h5_tk",
-      "value": "3e4d8527ad0d86cc4f6a7749e8168d04_1755675531153",
+      "value": "1f981c2b95dc08e0cc4ee7ed18c9cefc_1755693546708",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1756278261.345894,
+      "expires": 1756295826.932562,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "_m_h5_tk_enc",
-      "value": "b33db164aa3ef2da9d9380e547e57267",
+      "value": "2386e906fdcca869f98b6367bdec93f3",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1756278261.345975,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None"
-    },
-    {
-      "name": "cna",
-      "value": "hK0pIdRYBEICAWIVyLLfL2eR",
-      "domain": ".mmstat.com",
-      "path": "/",
-      "expires": 1790234396.110924,
+      "expires": 1756295826.932713,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "isg",
-      "value": "BLy8y30T-OrlVMyx-aqKLP7UhlNutWDf5hRAzZY9yKeKYVzrvsUwbzLDR4EZMpg3",
+      "value": "BPPzpnbDnz-JhFNsKkfNef1Rif4dKIfqRfH_cKWQT5JJpBNGLfgXOlEmWNxKH9_i",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1771226397,
+      "expires": 1771243112,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "_baxia_sec_cookie_",
-      "value": "%257B%2522tfstk%2522%253A%2522gcEx2v22QeDb21d2H5bkIez0mpwOxa24USyBjfcD57F8CSGmsVX4WAF3IF2c3n4-X7PYoCmiShh_Cbqmi-mj6VN3Or0isrmOBbwasjxcgVtTTW3MjrbVBzn4qrxiisoTCWmOt6jhx-yq0c1ht7GehLnsCGc1rq1VMbpGt6jhq-yqbc13sTK0mLHZNxMslc6-VAhShhNsG4OSpvos15N1e8Gzqtua1c6-VbksffNsfTeS3ZCtNKGMXrI41P7o1bK6fuHfgXwxwYkz2x3xOMlJX-r-HqhQnkFKSukLJu33lt_jpchz3u0A9BiaEyFT5Sfyfj4LFmGul_tENyljmoowCEguqRZiV8fXDjU7g5g8usKmGVE0Wq4F9eli5A3If4p6f8emM5M-AIKKru2_j0wlGnhYPSrsmk6H7Yu_rouUm_txAyymmPNcahG0J8iR4PZ3vZ-DtYoJlTBJ7FujUxFVDBuiFacZeXXAXF8ZzTk-tTBJ7FujUYhhHGLw74WP.%2522%257D",
+      "value": "%257B%2522tfstk%2522%253A%2522gBBx2zsqbXxXYn0qDNVoj25VgWjTK7jV4ZSIIFYm1aQRfZTDSCqV6hQhjfj00xfJBa7AiVvMsAL1fUXDoivXWC_hRsAMSsvTXUsNSED0uCMO8wdiIsV4X_pVEsDMorJOfwvT-y23KiS23da3-QXiBdJ6fRY_ZIa4kUng-y23EiS2QdahSuHQB0KwPnt6GdZJFhLWcA_6lQgWvHJ65N__2gTPEoRN5dZJFU-6CF_6CuIS3h49PmTiBsecWOccQUHsCTKbuesvy3-PendvRJ8-BiWJDILCm9QKwTKd9TdhGoNXvdLP0TAYJ29Nq6QO1Z4rCEfdVKTlGzMeP68XntJZfjOlEG6MFg4jHEC5uNORgrHDlCBc6IfUJX8M1hdBCQnsCgIDkNtJdqHpZTj1ILsulxLANZW6n9Zn_3R1ZtRFnzMvd6SDn1_0zATc9g9R4PXhpSkm-3J-GuE-_fRX4nQ4H2op8FOp2eqYBflwau-J-uE-_fRX43L3DRhZ_QrP.%2522%257D",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1771226397,
+      "expires": 1771243113,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
     }
   ],
   "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "proxy_used": false
+  "proxy_used": true
 }

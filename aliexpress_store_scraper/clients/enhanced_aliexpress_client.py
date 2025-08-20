@@ -27,6 +27,7 @@ import time
 from typing import Any, Dict, Optional
 
 from aliexpress_store_scraper.clients.aliexpress_client import AliExpressClient
+from aliexpress_store_scraper.utils.async_cookie_generator import AsyncCookieGenerator
 from aliexpress_store_scraper.utils.cookie_generator import CookieGenerator
 
 
@@ -59,10 +60,28 @@ class EnhancedAliExpressClient(AliExpressClient):
         super().__init__(base_url, use_proxy=use_proxy)
 
         self.auto_retry = auto_retry
+
+        # Set up proxy configuration for async cookie generator
+        proxy_config = None
+        if use_proxy and hasattr(self, "proxy_config") and self.proxy_config:
+            proxy_config = {
+                "server": f"http://{self.proxy_config['http']}",
+                "username": self.proxy_username,
+                "password": self.proxy_password,
+            }
+
         self.cookie_generator = CookieGenerator(
             cache_validity_minutes=cookie_cache_minutes,
             headless=headless_browser,
             base_url="https://www.aliexpress.us",
+        )
+
+        # Also set up async version for when running in async context
+        self.async_cookie_generator = AsyncCookieGenerator(
+            cache_validity_minutes=cookie_cache_minutes,
+            headless=headless_browser,
+            base_url="https://www.aliexpress.us",
+            proxy=proxy_config,
         )
 
         # Track last successful cookie session
@@ -409,6 +428,122 @@ class EnhancedAliExpressClient(AliExpressClient):
             status["cache_valid"] = False
 
         return status
+
+    async def _get_valid_cookies_async(
+        self, force_refresh: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Get valid cookies for making API requests (async version).
+
+        Args:
+            force_refresh: Force generation of fresh cookies
+
+        Returns:
+            Dictionary with cookies and metadata
+        """
+        try:
+            result = await self.async_cookie_generator.refresh_session_if_expired()
+
+            if result["success"] and result.get("cookies"):
+                # Validate cookies have essential tokens
+                validation = self.async_cookie_generator.validate_cookies(
+                    result["cookies"]
+                )
+
+                if validation["valid"]:
+                    self._last_successful_cookies = result["cookies"]
+                    self._last_cookie_time = time.time()
+                    return result
+                else:
+                    print(
+                        f"⚠️ Generated cookies missing essential tokens: {validation['missing_essential']}"
+                    )
+                    if not force_refresh:
+                        # Try once more by generating fresh cookies
+                        fresh_result = (
+                            await self.async_cookie_generator.generate_fresh_cookies()
+                        )
+                        if fresh_result.get("success"):
+                            return fresh_result
+
+            return result
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Cookie generation failed: {e}",
+                "cookies": "",
+            }
+
+    async def get_product_with_auto_cookies_async(
+        self, product_id: str, manual_cookies: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Get product data with automatic cookie management (async version).
+
+        Args:
+            product_id: AliExpress product ID
+            manual_cookies: Optional manual cookies (bypasses automation)
+
+        Returns:
+            Dictionary with product information or error details
+        """
+        # Use manual cookies if provided
+        if manual_cookies:
+            print("🔧 Using manually provided cookies")
+            return self.get_product(product_id, manual_cookies)
+
+        # Try with existing cached cookies first
+        cookie_result = await self._get_valid_cookies_async(force_refresh=False)
+
+        if not cookie_result["success"]:
+            return {
+                "success": False,
+                "error": f"Failed to get cookies: {cookie_result.get('error')}",
+                "product_id": product_id,
+                "automation_used": True,
+            }
+
+        cookies = cookie_result["cookies"]
+        from_cache = cookie_result.get("from_cache", False)
+
+        print(
+            f"🍪 Using {'cached' if from_cache else 'fresh'} cookies for product {product_id}"
+        )
+
+        # Try to get product data
+        result = self.get_product(product_id, cookies)
+
+        if result.get("success"):
+            result["automation_used"] = True
+            result["cookies_from_cache"] = from_cache
+            return result
+
+        # If auto_retry is enabled and we got a failure, try with fresh cookies
+        if self.auto_retry and not result.get("success"):
+            print("🔄 Request failed, trying with fresh cookies...")
+
+            fresh_cookie_result = await self._get_valid_cookies_async(
+                force_refresh=True
+            )
+
+            if fresh_cookie_result["success"]:
+                fresh_cookies = fresh_cookie_result["cookies"]
+                print("🍪 Using fresh cookies for retry...")
+                retry_result = self.get_product(product_id, fresh_cookies)
+
+                if retry_result.get("success"):
+                    retry_result["automation_used"] = True
+                    retry_result["cookies_from_cache"] = False
+                    retry_result["retry_used"] = True
+                    return retry_result
+
+        # Add automation metadata to the result
+        result["automation_used"] = True
+        result["cookies_from_cache"] = from_cache
+        result["retry_used"] = self.auto_retry
+
+        return result
 
 
 def main():

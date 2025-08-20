@@ -1,0 +1,94 @@
+[
+  {
+    "image_id": "1104531024_1104531024_certificate_1",
+    "status": "success",
+    "processing_time": 66.16698002815247,
+    "error": null,
+    "contact_info": {
+      "emails": [
+        "cloudstore2@borderxlab.com"
+      ],
+      "phone_numbers": [
+        "4087465938"
+      ],
+      "addresses": [
+        "111 W Evelyn Ave",
+        "United States California Sunnyvale 111 W Evelyn Ave STE 117 94086"
+      ],
+      "company_name": null,
+      "registration_number": null,
+      "confidence_score": 0.8
+    }
+  },
+  {
+    "image_id": "1104021062_1104021062_certificate_1",
+    "status": "success",
+    "processing_time": 83.36325693130493,
+    "error": null,
+    "contact_info": {
+      "emails": [],
+      "phone_numbers": [],
+      "addresses": [
+        "888 Huanhu West 2nd\n\nRoad",
+        "CN, Shanghai, Shanghai, Pudong New Area, Building C, 888 Huanhu West 2nd"
+      ],
+      "company_name": null,
+      "registration_number": null,
+      "confidence_score": 0.2
+    }
+  },
+  {
+    "image_id": "1104096355_1104096355_certificate_1",
+    "status": "success",
+    "processing_time": 84.85097432136536,
+    "error": null,
+    "contact_info": {
+      "emails": [
+        "xiao@improvecommerce.com"
+      ],
+      "phone_numbers": [
+        "3106992821"
+      ],
+      "addresses": [
+        "254 Chapman RD",
+        "United States Delaware Newark 254 Chapman RD STE 208 19702"
+      ],
+      "company_name": null,
+      "registration_number": null,
+      "confidence_score": 0.8
+    }
+  },
+  {
+    "image_id": "1104783588_1104783588_certificate_1",
+    "status": "success",
+    "processing_time": 85.50889778137207,
+    "error": null,
+    "contact_info": {
+      "emails": [],
+      "phone_numbers": [],
+      "addresses": [
+        "CN, Lianyungang City, Jiangsu Province, Lianyun District, China (Jiangsu) Pilot"
+      ],
+      "company_name": null,
+      "registration_number": null,
+      "confidence_score": 0.2
+    }
+  },
+  {
+    "image_id": "1104067221_1104067221_certificate_1",
+    "status": "success",
+    "processing_time": 24.045424938201904,
+    "error": null,
+    "contact_info": {
+      "emails": [],
+      "phone_numbers": [],
+      "addresses": [
+        "668 Jianshe Avenue",
+        "CN, Hubei Province, Wuhan City, Jiangan District, No. 668 Jianshe Avenue, No."
+      ],
+      "company_name": null,
+      "registration_number": null,
+      "confidence_score": 0.2
+    }
+  }
+]
