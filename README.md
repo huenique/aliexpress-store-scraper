@@ -1,7 +1,81 @@
 
-# AliExpress Product & Seller Scraper
+# AliExpress Store Scraper Package
 
-This project provides a fully reverse-engineered AliExpress client with **automated cookie generation**, **focused seller field extraction**, and **store credentials scraping**. It interacts directly with AliExpress's internal MTOP API to extract comprehensive product data and core seller information, plus dedicated store credential page scraping.
+A comprehensive Python package for scraping AliExpress product and store data with automated cookie generation and API integration.
+
+## 📦 Package Structure
+
+The project is now organized as a proper Python package under `aliexpress_store_scraper/`:
+
+```text
+aliexpress_store_scraper/
+├── __init__.py                 # Main package initialization
+├── __main__.py                 # CLI entry point for module execution
+├── cli/                        # Command-line interfaces
+│   ├── cli.py                  # Basic product scraper CLI
+│   ├── enhanced_cli.py         # Enhanced CLI with automation
+│   ├── core_seller_cli.py      # Seller information extractor
+│   └── store_credentials_network_cli.py  # Store network scraper
+├── clients/                    # HTTP clients and API interfaces
+│   ├── aliexpress_client.py    # Basic AliExpress API client
+│   └── enhanced_aliexpress_client.py  # Enhanced client with automation
+├── processors/                 # Data processing and business logic
+│   ├── batch_seller_processor.py      # Batch processing logic
+│   ├── business_license_processor.py  # Business license extraction
+│   ├── core_seller_extractor.py       # Core seller data extraction
+│   └── store_credentials_network_scraper.py  # Store credentials scraping
+└── utils/                      # Utility functions and helpers
+    ├── captcha_solver.py       # CAPTCHA solving utilities
+    ├── cookie_generator.py     # Cookie automation
+    └── logger.py               # Logging utilities
+```
+
+## � Installation
+
+Install the package in development mode:
+
+```bash
+pip install -e .
+```
+
+Or install dependencies manually:
+
+```bash
+pip install python-dotenv flask playwright requests python-aliexpress-api pandas pillow pytesseract opencv-python-headless numpy
+```
+
+## �🚀 Usage
+
+### As a Python Module (Recommended)
+
+You can now run the scraper as a Python module:
+
+```bash
+# Show available commands
+python -m aliexpress_store_scraper --help
+
+# Basic product scraping
+python -m aliexpress_store_scraper product "https://www.aliexpress.us/item/3256809096800275.html"
+
+# Enhanced scraping with automated cookies
+python -m aliexpress_store_scraper enhanced "https://www.aliexpress.us/item/3256809096800275.html" --json
+
+# Extract seller information
+python -m aliexpress_store_scraper seller 12345 --format json
+
+# Store network scraping
+python -m aliexpress_store_scraper store-network --store-ids ids.txt --concurrent 10
+```
+
+### Backward Compatibility
+
+For existing scripts, backward compatibility wrappers are provided:
+
+```bash
+# These still work as before
+python enhanced_cli.py "https://www.aliexpress.us/item/3256809096800275.html"
+python cli.py "https://www.aliexpress.us/item/3256809096800275.html" "cookie_string"
+```
 
 ## 🎯 Key Features
 

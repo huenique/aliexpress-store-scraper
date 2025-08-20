@@ -26,8 +26,8 @@ Date: August 2025
 import time
 from typing import Any, Dict, Optional
 
-from aliexpress_client import AliExpressClient
-from cookie_generator import CookieGenerator
+from aliexpress_store_scraper.clients.aliexpress_client import AliExpressClient
+from aliexpress_store_scraper.utils.cookie_generator import CookieGenerator
 
 
 class EnhancedAliExpressClient(AliExpressClient):

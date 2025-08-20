@@ -8,7 +8,7 @@ resolution-markers = [
 ]
 
 [[package]]
-name = "aliexpress-scraper"
+name = "aliexpress-store-scraper"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

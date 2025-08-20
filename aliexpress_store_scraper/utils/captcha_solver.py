@@ -9,7 +9,7 @@ import random
 
 from playwright.async_api import Page
 
-from logger import ScraperLogger
+from aliexpress_store_scraper.utils.logger import ScraperLogger
 
 
 class AdvancedCaptchaSolver:

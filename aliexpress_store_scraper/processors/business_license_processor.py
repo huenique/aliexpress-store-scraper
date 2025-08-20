@@ -69,7 +69,7 @@ except ImportError:
 
 HAS_OCR = has_ocr_deps
 
-from logger import ScraperLogger
+from aliexpress_store_scraper.utils.logger import ScraperLogger
 
 
 @dataclass

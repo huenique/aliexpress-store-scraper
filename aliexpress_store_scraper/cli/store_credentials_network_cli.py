@@ -30,7 +30,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from store_credentials_network_scraper import StoreCredentialsNetworkScraper
+from aliexpress_store_scraper.processors.store_credentials_network_scraper import (
+    StoreCredentialsNetworkScraper,
+)
 
 
 def parse_arguments() -> argparse.Namespace:

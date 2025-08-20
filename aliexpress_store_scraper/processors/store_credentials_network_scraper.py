@@ -43,8 +43,8 @@ from playwright.async_api import (
     async_playwright,
 )
 
-from captcha_solver import AdvancedCaptchaSolver
-from logger import ScraperLogger
+from aliexpress_store_scraper.utils.captcha_solver import AdvancedCaptchaSolver
+from aliexpress_store_scraper.utils.logger import ScraperLogger
 
 
 class StoreCredentialsNetworkScraper:

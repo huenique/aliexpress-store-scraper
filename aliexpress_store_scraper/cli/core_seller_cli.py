@@ -33,8 +33,12 @@ import json
 import re
 import sys
 
-from core_seller_extractor import CoreSellerExtractor
-from enhanced_aliexpress_client import EnhancedAliExpressClient
+from aliexpress_store_scraper.clients.enhanced_aliexpress_client import (
+    EnhancedAliExpressClient,
+)
+from aliexpress_store_scraper.processors.core_seller_extractor import (
+    CoreSellerExtractor,
+)
 
 
 def extract_product_id(url_or_id):
