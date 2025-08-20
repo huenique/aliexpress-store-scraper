@@ -1,6 +1,6 @@
 {
-  "saved_at": "2025-08-20 03:25:33 UTC",
-  "timestamp": 1755660333,
+  "saved_at": "2025-08-20 04:13:15 UTC",
+  "timestamp": 1755663195,
   "cookies": [
     {
       "name": "arms_uid",
@@ -27,7 +27,7 @@
       "value": "x_l=0&acs_rt=00191b20aac848a1abd8c4beb9a4e25d",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1790220291.220006,
+      "expires": 1790223136.693773,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
@@ -83,16 +83,6 @@
       "sameSite": "None"
     },
     {
-      "name": "cna",
-      "value": "hK0pIdRYBEICAWIVyLLfL2eR",
-      "domain": ".mmstat.com",
-      "path": "/",
-      "expires": 1790220149.72351,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None"
-    },
-    {
       "name": "cbc",
       "value": "T2gAvCVI7TElfJ4RnZQ33LCFJ8cbti3k0YpNSs4mJGgmeNfYaM8QPls7LyMN_WVWEPI=",
       "domain": ".ynuf.aliapp.org",
@@ -101,16 +91,6 @@
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
-    },
-    {
-      "name": "x5sectag",
-      "value": "51194",
-      "domain": "acs.aliexpress.com",
-      "path": "/",
-      "expires": 1755660355.889089,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
     },
     {
       "name": "x5sec",
@@ -123,56 +103,56 @@
       "sameSite": "None"
     },
     {
-      "name": "tfstk",
-      "value": "getx7jv4QyXfK-tAEKuuIkoOZWJ9X4v2UIJQj1f05QdJsCrc5qRiXlp2COYcisYR6QORGstGhQK9LQ5G5qk2yhdHInAiudX6ydOfi1vsgNZ9TBQgjE0qBUI2qEqGijS9CBjttXmnxKJV0GGntzvG7psdhoiGlla50OYBWp-rxKJVb-FsKUi3BkKN_i161Z_5N957ctO1G_MRCOVb5oOseYBOQ-N_css7POWOf1O1fYp5aOI1hCsseLcON-1gXEnj39y7gqZTX3BAk1EcwlUqIt_AOK1-OXt8fZCBh_EiiSsHws6BAb4VpZdOP3vgKlfXheRNdINja1YHEn_RX2VN6FvXmnIaQzpRWnYNWnkQT6LXehIDMXUNOEv5Vs8jsr1X0pjJ5aHjcLIAMB-XMDhWOwKD7NKqdW5plLKOmnHgut8WggByjbrf6UT6mZSaGb5M-LxfyMsP0HxKuoVhUgUxeYUa7Z6PHIoYTuf9tv6RtxnT7P7rUTCneYUa7Z6Pe6DxXPzNzY5..",
-      "domain": ".aliexpress.com",
-      "path": "/",
-      "expires": 1771212300,
-      "httpOnly": false,
-      "secure": false,
-      "sameSite": "Lax"
-    },
-    {
       "name": "_m_h5_tk",
-      "value": "b728a60e385df2fbf4133e9a4c38cb8e_1755662483464",
+      "value": "7079c7e3d82abbb84d842d745b1cab49_1755665506607",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1756265123.796972,
+      "expires": 1756267876.764656,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "_m_h5_tk_enc",
-      "value": "44009af923bb564f5d0f8433d3945e34",
+      "value": "73ca5cfcaca8819f97ec622854c6b2b9",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1756265123.797111,
+      "expires": 1756267876.764784,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "cna",
+      "value": "hK0pIdRYBEICAWIVyLLfL2eR",
+      "domain": ".mmstat.com",
+      "path": "/",
+      "expires": 1790223138.47857,
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "None"
+    },
+    {
+      "name": "isg",
+      "value": "BAcHamPTIztuMqewdqPh_Wn9nbLRDNvuMa1rDNn0Ixa9SCcK4dxrPkUa7AAWu7Nm",
+      "domain": ".aliexpress.com",
+      "path": "/",
+      "expires": 1771215138,
       "httpOnly": false,
       "secure": true,
       "sameSite": "None"
     },
     {
       "name": "_baxia_sec_cookie_",
-      "value": "%257B%2522tfstk%2522%253A%2522gcssRfYgoLAE4LQJ5nyEVJLDtw-aUJrzDx9AEtnZHhK9Mx1dHK7N3SmXkT117fWYS-ZfaOd23RAwMw1AtFRTsEoXh_5E0OzGg6OAs6cNbEyMhm1CeOyGgtHG-_W-bGzM0mtMmnFzaurrIOxDDaZK38RGp9vYLdC1zwO9mnFzTQgVyBxc6wFY1hBLdKJ2BmCvDJtpFBn9Hcpx9J9D9nn9kFdKJLJWHmnAM9eBnBdvDFCvvJ9D9IKvDYHiFKa6sOwWVuxFw2e5CBixDM9TsQB6OpvhAdT6wedIDtSBCFORQg1579p5PMTPWRU9FnOhIM8_NbKcLa1fk1PnDC75phdFWWnk9aA9bGxmHVLFYtI2v9PtfC_dssLCS5iw6EsNlF7uN4A2kKTJDeMxD96w1spB2fiW8MWA0HBU6cO1J1jvbgeropYA8GYlbWn62aXwbZCatmdNP9KC4koyNu1KlqAtcpOzdJgmoeB2fG3EqW7WWpv68JwI6ZY9KpOzdJgmoFpHCeyQdfQc.%2522%257D",
+      "value": "%257B%2522tfstk%2522%253A%2522gheKVpZe4ImIq48evzfMqK7gbEZRn1qUbyrXE40HNPUTVygnrbjUw0U0qQqhYpVtePzLtUDoZL37VV2n-kDIyba0lWcorWDR2VZzr2vh8b98urhkEWfF25HUIWvo-wk8VrDRoZXcnkrELY_coIW6RCDSVT05sX_FJVKloZXcIkrEUY_0rGUE6Fnr5DiSOYstCVo-VYgINFOscVgSFza7fGeTybkSFzM1X0usPYM7PlM46a36A4v8991bo1NxWL97BD_Elk3tbcytvX3f3Vp8YRnK9qZ3Hr3N8mFYBjVCA6ixeVrUIXQvlYrgMzF7-NJS-SEsdVVC5Ku_g2M3LY-WOf2gV8D_jw9KJ5aUPfFFJp0IwJV-tS7vg4cS2jMS6397Xk0LPcHXJKhgIuwoClbBp2F_88M3hiArbbNgLjyh5pHbgkD3NybwF2VYfAIr6-2ATpYmbAdCXGdyaXiZvyWpujmKEKotoMBJaQlNbc3cXGdyaXiZXqjdeQRr_G5..%2522%257D",
       "domain": ".aliexpress.com",
       "path": "/",
-      "expires": 1771212323,
+      "expires": 1771215138,
       "httpOnly": false,
       "secure": false,
       "sameSite": "Lax"
-    },
-    {
-      "name": "isg",
-      "value": "BFNThHqLP9_R7_MMSidtGV0x6d59COfKpdEfkAVwr3KphHMmjdh3GrHeuvzqJD_C",
-      "domain": ".aliexpress.com",
-      "path": "/",
-      "expires": 1771212304,
-      "httpOnly": false,
-      "secure": true,
-      "sameSite": "None"
     }
   ],
   "user_agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "proxy_used": true
+  "proxy_used": false
 }

@@ -75,6 +75,37 @@ def main():
         "--concurrent", type=int, default=5, help="Number of concurrent requests"
     )
 
+    # Seller data populator
+    populate_parser = subparsers.add_parser(
+        "populate-sellers", help="Populate seller data for products in JSON file"
+    )
+    populate_parser.add_argument("input_file", help="JSON file with product data")
+    populate_parser.add_argument(
+        "--output", "-o", help="Output file (default: <input_file>_with_sellers.json)"
+    )
+    populate_parser.add_argument(
+        "--cookie", "-c", help="Manual cookie string (optional)"
+    )
+    populate_parser.add_argument(
+        "--delay",
+        "-d",
+        type=float,
+        default=1.0,
+        help="Delay between requests in seconds",
+    )
+    populate_parser.add_argument(
+        "--retry", action="store_true", help="Enable retry for failed products"
+    )
+    populate_parser.add_argument(
+        "--retry-delay", type=float, default=2.0, help="Delay between retry requests"
+    )
+    populate_parser.add_argument(
+        "--max-retries", type=int, default=3, help="Maximum retry attempts per product"
+    )
+    populate_parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would be processed"
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -136,6 +167,29 @@ def main():
         if args.concurrent:
             sys.argv.extend(["--concurrent", str(args.concurrent)])
         network_main()
+
+    elif args.command == "populate-sellers":
+        from aliexpress_store_scraper.processors.seller_data_populator import (
+            main as populate_main,
+        )
+
+        # Reconstruct sys.argv for the seller data populator
+        sys.argv = ["seller_data_populator.py", args.input_file]
+        if args.output:
+            sys.argv.extend(["--output", args.output])
+        if args.cookie:
+            sys.argv.extend(["--cookie", args.cookie])
+        if args.delay:
+            sys.argv.extend(["--delay", str(args.delay)])
+        if args.retry:
+            sys.argv.append("--retry")
+        if args.retry_delay:
+            sys.argv.extend(["--retry-delay", str(args.retry_delay)])
+        if args.max_retries:
+            sys.argv.extend(["--max-retries", str(args.max_retries)])
+        if args.dry_run:
+            sys.argv.append("--dry-run")
+        populate_main()
 
     else:
         parser.print_help()
