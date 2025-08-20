@@ -11,6 +11,7 @@ Available commands:
 - enhanced: Use enhanced CLI with automated cookies
 - seller: Extract seller/store information
 - store-network: Scrape store credentials and network data
+- unified-pipeline: Complete seller info pipeline (credentials + OCR contact extraction)
 """
 
 import argparse
@@ -69,10 +70,55 @@ def main():
     network_parser = subparsers.add_parser(
         "store-network", help="Scrape store credentials and network data"
     )
-    network_parser.add_argument("--store-ids", help="File containing store IDs")
-    network_parser.add_argument("--output", help="Output file path")
+    network_parser.add_argument("--store-ids", help="Comma-separated store IDs")
     network_parser.add_argument(
-        "--concurrent", type=int, default=5, help="Number of concurrent requests"
+        "--file", help="File containing store IDs (one per line)"
+    )
+    network_parser.add_argument(
+        "--json-file", help="JSON file containing objects with 'Store ID' field"
+    )
+    network_parser.add_argument("--output", help="Output file path")
+
+    # Unified seller pipeline
+    unified_parser = subparsers.add_parser(
+        "unified-pipeline",
+        help="Complete seller info pipeline (credentials + OCR contact extraction)",
+    )
+    unified_input_group = unified_parser.add_mutually_exclusive_group(required=True)
+    unified_input_group.add_argument(
+        "--json-file", help="JSON file containing 'Store ID' fields"
+    )
+    unified_input_group.add_argument(
+        "--store-ids", help="Comma-separated store IDs to process directly"
+    )
+    unified_parser.add_argument("--output", help="Output JSON file path")
+    unified_parser.add_argument("--output-dir", help="Directory for output files")
+    unified_parser.add_argument(
+        "--workers", type=int, default=4, help="Maximum parallel workers"
+    )
+    unified_parser.add_argument(
+        "--captcha-retries", type=int, default=3, help="Maximum CAPTCHA retry attempts"
+    )
+    unified_parser.add_argument(
+        "--no-ocr-preprocessing",
+        action="store_true",
+        help="Disable OCR image preprocessing",
+    )
+    unified_parser.add_argument(
+        "--no-intermediate-files",
+        action="store_true",
+        help="Don't save intermediate results",
+    )
+    unified_parser.add_argument(
+        "--proxy",
+        action="store_true",
+        help="Use Oxylabs proxy (requires OXYLABS_* environment variables)",
+    )
+    unified_parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose output"
+    )
+    unified_parser.add_argument(
+        "--quiet", action="store_true", help="Suppress progress output"
     )
 
     # Seller data populator
@@ -154,6 +200,8 @@ def main():
         seller_main()
 
     elif args.command == "store-network":
+        import asyncio
+
         from aliexpress_store_scraper.cli.store_credentials_network_cli import (
             main as network_main,
         )
@@ -162,11 +210,13 @@ def main():
         sys.argv = ["store_credentials_network_cli.py"]
         if args.store_ids:
             sys.argv.extend(["--store-ids", args.store_ids])
+        if args.file:
+            sys.argv.extend(["--file", args.file])
+        if args.json_file:
+            sys.argv.extend(["--json-file", args.json_file])
         if args.output:
             sys.argv.extend(["--output", args.output])
-        if args.concurrent:
-            sys.argv.extend(["--concurrent", str(args.concurrent)])
-        network_main()
+        asyncio.run(network_main())
 
     elif args.command == "populate-sellers":
         from aliexpress_store_scraper.processors.seller_data_populator import (
@@ -190,6 +240,35 @@ def main():
         if args.dry_run:
             sys.argv.append("--dry-run")
         populate_main()
+
+    elif args.command == "unified-pipeline":
+        import asyncio
+
+        from aliexpress_store_scraper.cli.unified_pipeline import main as unified_main
+
+        # Reconstruct sys.argv for the unified pipeline CLI
+        sys.argv = ["unified_pipeline.py"]
+        if args.json_file:
+            sys.argv.extend(["--json-file", args.json_file])
+        if args.store_ids:
+            sys.argv.extend(["--store-ids", args.store_ids])
+        if args.output:
+            sys.argv.extend(["--output", args.output])
+        if args.output_dir:
+            sys.argv.extend(["--output-dir", args.output_dir])
+        if args.workers:
+            sys.argv.extend(["--workers", str(args.workers)])
+        if args.captcha_retries:
+            sys.argv.extend(["--captcha-retries", str(args.captcha_retries)])
+        if args.no_ocr_preprocessing:
+            sys.argv.append("--no-ocr-preprocessing")
+        if args.no_intermediate_files:
+            sys.argv.append("--no-intermediate-files")
+        if args.verbose:
+            sys.argv.append("--verbose")
+        if args.quiet:
+            sys.argv.append("--quiet")
+        asyncio.run(unified_main())
 
     else:
         parser.print_help()

@@ -10,8 +10,11 @@ Usage:
     # Scrape specific store IDs
     python store_credentials_network_cli.py --store-ids "123456,789012,345678"
 
-    # Scrape from file
+    # Scrape from text file
     python store_credentials_network_cli.py --file store_ids.txt
+
+    # Scrape from JSON file with 'Store ID' field
+    python store_credentials_network_cli.py --json-file nike_100_final.json
 
     # Demo mode with fake IDs
     python store_credentials_network_cli.py --demo
@@ -25,6 +28,7 @@ Date: August 2025
 
 import argparse
 import asyncio
+import json
 import sys
 import time
 from pathlib import Path
@@ -44,6 +48,7 @@ def parse_arguments() -> argparse.Namespace:
 Examples:
   %(prog)s --store-ids "123456,789012,345678"
   %(prog)s --file store_ids.txt --timeout 20000
+  %(prog)s --json-file nike_100_final.json --delay 2.0
   %(prog)s --demo --delay 2.0 --retries 3
   %(prog)s --store-ids "123456" --output my_results.json --no-headless
         """,
@@ -56,6 +61,11 @@ Examples:
     )
     input_group.add_argument(
         "--file", type=str, help="File containing store IDs (one per line)"
+    )
+    input_group.add_argument(
+        "--json-file",
+        type=str,
+        help="JSON file containing objects with 'Store ID' field",
     )
     input_group.add_argument(
         "--demo", action="store_true", help="Run demo mode with sample store IDs"
@@ -148,6 +158,81 @@ def load_store_ids_from_file(file_path: str) -> List[str]:
         sys.exit(1)
 
 
+def load_store_ids_from_json(file_path: str) -> List[str]:
+    """
+    Load store IDs from a JSON file containing objects with 'Store ID' field.
+
+    Args:
+        file_path: Path to JSON file containing objects with 'Store ID' field
+
+    Returns:
+        List of store IDs
+
+    Raises:
+        SystemExit: If file cannot be read, is empty, or doesn't contain valid data
+    """
+    try:
+        path = Path(file_path)
+        if not path.exists():
+            print(f"❌ Error: File '{file_path}' does not exist")
+            sys.exit(1)
+
+        store_ids: List[str] = []
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        # Handle different JSON structures
+        if isinstance(data, list):
+            # Array of objects
+            for item in data:
+                if (
+                    isinstance(item, dict)
+                    and "Store ID" in item
+                    and item["Store ID"] is not None
+                ):
+                    store_id = str(item["Store ID"]).strip()
+                    if store_id and store_id != "None" and store_id not in store_ids:
+                        store_ids.append(store_id)
+        elif (
+            isinstance(data, dict)
+            and "Store ID" in data
+            and data["Store ID"] is not None
+        ):
+            # Single object
+            store_id = str(data["Store ID"]).strip()
+            if store_id and store_id != "None":
+                store_ids.append(store_id)
+        else:
+            print(
+                f"❌ Error: JSON file '{file_path}' does not contain objects with 'Store ID' field"
+            )
+            print(
+                "   Expected format: array of objects with 'Store ID' field or single object with 'Store ID' field"
+            )
+            sys.exit(1)
+
+        if not store_ids:
+            print(f"❌ Error: No valid Store IDs found in '{file_path}'")
+            sys.exit(1)
+
+        # Remove duplicates while preserving order
+        unique_store_ids = []
+        seen = set()
+        for store_id in store_ids:
+            if store_id not in seen:
+                unique_store_ids.append(store_id)
+                seen.add(store_id)
+
+        return unique_store_ids
+
+    except json.JSONDecodeError as e:
+        print(f"❌ Error: Invalid JSON in file '{file_path}': {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error reading JSON file '{file_path}': {e}")
+        sys.exit(1)
+
+
 def get_demo_store_ids() -> List[str]:
     """Get demo store IDs for testing."""
     return ["1234567890", "9876543210", "5555555555"]
@@ -217,6 +302,9 @@ async def main():
     elif args.file:
         store_ids = load_store_ids_from_file(args.file)
         print(f"📁 Loaded {len(store_ids)} store IDs from '{args.file}'")
+    elif args.json_file:
+        store_ids = load_store_ids_from_json(args.json_file)
+        print(f"📄 Loaded {len(store_ids)} store IDs from JSON file '{args.json_file}'")
     else:
         store_ids = parse_store_ids(args.store_ids)
         print(f"📝 Parsed {len(store_ids)} store IDs from command line")

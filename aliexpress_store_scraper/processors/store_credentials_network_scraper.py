@@ -1269,13 +1269,35 @@ class StoreCredentialsNetworkScraper:
                     self.logger.error(
                         f"❌ Attempt {attempt} failed for store {store_id}: {e}"
                     )
+
+                    # Even if the scraping failed, preserve any images that were captured
+                    store_image_data = {
+                        k: v
+                        for k, v in self.image_data.items()
+                        if k.startswith(store_id)
+                    }
+                    store_network_data = {
+                        k: v
+                        for k, v in self.network_data.items()
+                        if k.startswith(store_id)
+                    }
+
                     result: dict[str, Any] = {
                         "status": "error",
                         "error": f"Failed after {attempt} attempts: {str(e)}",
                         "scraped_at": time.time(),
-                        "network_data": {},
-                        "images": {},
+                        "network_data": store_network_data,
+                        "images": store_image_data,
+                        "images_extracted": len(store_image_data),
+                        "network_requests_captured": len(store_network_data),
                     }
+
+                    # Log if we captured images despite the error
+                    if store_image_data:
+                        self.logger.info(
+                            f"✅ Preserved {len(store_image_data)} images from failed attempt for store {store_id}"
+                        )
+
                     attempt += 1
 
             if result:

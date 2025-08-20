@@ -134,6 +134,7 @@ results/
 
 # Session cache file
 session_cache.json
+aliexpress_session_cookies.json
 
 # OS generated files
 .DS_Store

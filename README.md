@@ -64,7 +64,9 @@ python -m aliexpress_store_scraper enhanced "https://www.aliexpress.us/item/3256
 python -m aliexpress_store_scraper seller 12345 --format json
 
 # Store network scraping
-python -m aliexpress_store_scraper store-network --store-ids ids.txt --concurrent 10
+python -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678" --concurrent 10
+python -m aliexpress_store_scraper store-network --file store_ids.txt --concurrent 5
+python -m aliexpress_store_scraper store-network --json-file nike_products.json --concurrent 10
 ```
 
 ### Backward Compatibility
@@ -98,8 +100,10 @@ python cli.py "https://www.aliexpress.us/item/3256809096800275.html" "cookie_str
 ### 🏪 **Store Credentials Scraping**
 
 - **NEW**: Headless browser scraping of store credential pages
+- **NEW**: JSON file input support - extract Store IDs from product data files
 - Optimized performance with CSS and media disabled (HTML/JS only)
 - Batch processing of multiple store IDs
+- Flexible input methods: individual IDs, text files, or JSON files
 - Configurable delays and retry logic
 - Comprehensive error handling and progress tracking
 - Support for `https://shoprenderview.aliexpress.com/credential/showcredential.htm?storeNum={store_id}`
