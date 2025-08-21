@@ -52,21 +52,26 @@ You can now run the scraper as a Python module:
 
 ```bash
 # Show available commands
-python -m aliexpress_store_scraper --help
+python3 -m aliexpress_store_scraper --help
 
 # Basic product scraping
-python -m aliexpress_store_scraper product "https://www.aliexpress.us/item/3256809096800275.html"
+python3 -m aliexpress_store_scraper product "https://www.aliexpress.us/item/3256809096800275.html"
 
 # Enhanced scraping with automated cookies
-python -m aliexpress_store_scraper enhanced "https://www.aliexpress.us/item/3256809096800275.html" --json
+python3 -m aliexpress_store_scraper enhanced "https://www.aliexpress.us/item/3256809096800275.html" --json
 
 # Extract seller information
-python -m aliexpress_store_scraper seller 12345 --format json
+python3 -m aliexpress_store_scraper seller 12345 --format json
 
 # Store network scraping
-python -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678" --concurrent 10
-python -m aliexpress_store_scraper store-network --file store_ids.txt --concurrent 5
-python -m aliexpress_store_scraper store-network --json-file nike_products.json --concurrent 10
+python3 -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678" --concurrent 10
+python3 -m aliexpress_store_scraper store-network --file store_ids.txt --concurrent 5
+python3 -m aliexpress_store_scraper store-network --json-file nike_products.json --concurrent 10
+
+# OCR Contact Data Transformation to CSV
+python3 -m aliexpress_store_scraper transform-ocr --contact-info nike_100_seller_contact_info.json --output sellers.csv
+python3 -m aliexpress_store_scraper transform-ocr --combined nike_100_with_sellers.json nike_100_seller_contact_info.json --output complete_sellers.csv
+python3 -m aliexpress_store_scraper transform-ocr --ocr-results ocr_results.json --output sellers.csv
 ```
 
 ### Backward Compatibility
@@ -364,6 +369,64 @@ async with StoreCredentialsNetworkScraper() as scraper:
 - Batch processing with progress tracking and comprehensive error handling
 - Base64 image extraction: Automatically detects and extracts certificate images from API responses
 - Format detection: Identifies image formats (JPEG, PNG, etc.) from base64 magic numbers
+
+### 🔄 **OCR Contact Data Transformation to CSV**
+
+Transform OCR-extracted seller contact information into CSV format matching the Seller_rows.csv schema:
+
+**CLI Usage:**
+
+```bash
+# Transform contact-only data (from OCR extraction)
+python3 -m aliexpress_store_scraper transform-ocr --contact-info nike_100_seller_contact_info.json --output sellers.csv
+
+# Transform combined data (seller population + contact info for complete store names and URLs)
+python3 -m aliexpress_store_scraper transform-ocr --combined nike_100_with_sellers.json nike_100_seller_contact_info.json --output complete_sellers.csv
+
+# Transform OCR results format
+python3 -m aliexpress_store_scraper transform-ocr --ocr-results ocr_results.json --output sellers.csv
+
+# Show help for transformation options
+python3 -m aliexpress_store_scraper transform-ocr --help
+```
+
+**Standalone Script Usage:**
+
+```bash
+# Same functionality as CLI version
+python transform_ocr_to_csv.py --contact-info nike_100_seller_contact_info.json --output sellers.csv
+python transform_ocr_to_csv.py --combined nike_100_with_sellers.json nike_100_seller_contact_info.json --output complete_sellers.csv
+```
+
+**Key Features:**
+
+- **Contact-only mode**: Transform just contact information from OCR extraction
+- **Combined mode**: Merge seller population data (real store names, URLs) with contact info
+- **OCR results mode**: Handle direct OCR processing output format
+- **CSV Schema Compliance**: Matches exact Seller_rows.csv format with all 28 columns
+- **Data Deduplication**: Automatically removes duplicate stores when combining data sources
+- **Default Values**: Sets appropriate defaults (verification_status: "Unverified", seller_note: empty)
+- **UUID Generation**: Creates unique identifiers for each seller record
+
+**Output Format:**
+
+All transformations produce CSV files with these key columns:
+
+- `seller_uuid` - Unique identifier (auto-generated)
+- `seller_name` - Store name (e.g., "Nike Official Store" or "Store 1104021062" for contact-only)
+- `seller_profile_url` - Store URL (auto-constructed from store_id if not available)
+- `email_address`, `phone_number`, `physical_address` - Contact information from OCR
+- `verification_status` - Always "Unverified"
+- `seller_note` - Empty string (ready for manual notes)
+- Plus 20+ additional fields for complete schema compatibility
+
+**Input Data Formats:**
+
+1. **Contact Info JSON**: OCR extraction results with store_id and contact_info objects
+2. **Seller Population JSON**: Store data with real names, URLs, and seller information  
+3. **OCR Results JSON**: Direct OCR processing output format
+
+For detailed documentation and examples, see `OCR_CSV_TRANSFORM.md`.
 
 ## 📁 Project Structure
 
@@ -688,6 +751,45 @@ Options:
 - Automated cookie management with Playwright
 - CLI tools for command-line usage
 - Production ready with comprehensive error handling
+
+## 🚀 Quick Reference - Most Common Commands
+
+**Transform OCR Contact Data to CSV:**
+
+```bash
+# Contact info only (basic transformation)
+python3 -m aliexpress_store_scraper transform-ocr --contact-info nike_100_seller_contact_info.json --output sellers.csv
+
+# Combined data (recommended - includes real store names and URLs)  
+python3 -m aliexpress_store_scraper transform-ocr --combined nike_100_with_sellers.json nike_100_seller_contact_info.json --output complete_sellers.csv
+```
+
+**Product Scraping:**
+
+```bash
+# Automated product scraping (no cookies needed)
+python3 -m aliexpress_store_scraper enhanced "https://www.aliexpress.us/item/3256809096800275.html" --json
+
+# Extract seller information from product
+python3 -m aliexpress_store_scraper seller 3256809096800275 --format json
+```
+
+**Store Network Scraping:**
+
+```bash
+# Scrape multiple stores
+python3 -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678" --concurrent 10
+
+# From JSON file (extract Store IDs from product data)
+python3 -m aliexpress_store_scraper store-network --json-file nike_products.json --concurrent 10
+```
+
+**Show All Available Commands:**
+
+```bash
+python3 -m aliexpress_store_scraper --help
+python3 -m aliexpress_store_scraper transform-ocr --help
+```
 
 ## Contributing
 

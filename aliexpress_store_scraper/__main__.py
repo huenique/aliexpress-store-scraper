@@ -197,6 +197,32 @@ def main():
         help="Don't save intermediate results (seller data, credentials, OCR)",
     )
 
+    # Transform OCR results to CSV
+    transform_parser = subparsers.add_parser(
+        "transform-ocr",
+        help="Transform OCR results to CSV format (Seller_rows.csv compatible)",
+    )
+    transform_input_group = transform_parser.add_mutually_exclusive_group(required=True)
+    transform_input_group.add_argument(
+        "--ocr-results", help="Path to OCR results JSON file (e.g., ocr_results.json)"
+    )
+    transform_input_group.add_argument(
+        "--contact-info",
+        help="Path to seller contact info JSON file (e.g., nike_100_seller_contact_info.json)",
+    )
+    transform_input_group.add_argument(
+        "--combined",
+        nargs=2,
+        metavar=("SELLER_DATA", "CONTACT_INFO"),
+        help="Paths to seller population data and contact info files (e.g., --combined nike_100_with_sellers.json nike_100_seller_contact_info.json)",
+    )
+    transform_parser.add_argument(
+        "--output", required=True, help="Output CSV file path"
+    )
+    transform_parser.add_argument(
+        "--verbose", action="store_true", help="Enable verbose output"
+    )
+
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(1)
@@ -341,6 +367,25 @@ def main():
         if args.quiet:
             sys.argv.append("--quiet")
         asyncio.run(unified_main())
+
+    elif args.command == "transform-ocr":
+        from aliexpress_store_scraper.cli.transform_ocr_cli import (
+            main as transform_main,
+        )
+
+        # Reconstruct sys.argv for the transform CLI
+        sys.argv = ["transform_ocr_cli.py"]
+        if args.ocr_results:
+            sys.argv.extend(["--ocr-results", args.ocr_results])
+        if args.contact_info:
+            sys.argv.extend(["--contact-info", args.contact_info])
+        if args.combined:
+            sys.argv.extend(["--combined"] + list(args.combined))
+        if args.output:
+            sys.argv.extend(["--output", args.output])
+        if args.verbose:
+            sys.argv.append("--verbose")
+        transform_main()
 
     else:
         parser.print_help()
