@@ -12,22 +12,34 @@ aliexpress_store_scraper/
 ├── __init__.py                 # Main package initialization
 ├── __main__.py                 # CLI entry point for module execution
 ├── cli/                        # Command-line interfaces
+│   ├── __init__.py
 │   ├── cli.py                  # Basic product scraper CLI
 │   ├── enhanced_cli.py         # Enhanced CLI with automation
 │   ├── core_seller_cli.py      # Seller information extractor
-│   └── store_credentials_network_cli.py  # Store network scraper
+│   ├── store_credentials_network_cli.py  # Store network scraper
+│   ├── transform_ocr_cli.py    # OCR data transformation CLI
+│   └── unified_pipeline.py     # Unified seller pipeline CLI
 ├── clients/                    # HTTP clients and API interfaces
+│   ├── __init__.py
 │   ├── aliexpress_client.py    # Basic AliExpress API client
 │   └── enhanced_aliexpress_client.py  # Enhanced client with automation
 ├── processors/                 # Data processing and business logic
+│   ├── __init__.py
 │   ├── batch_seller_processor.py      # Batch processing logic
+│   ├── brand_to_seller_pipeline.py    # Complete brand-to-seller pipeline
 │   ├── business_license_processor.py  # Business license extraction
 │   ├── core_seller_extractor.py       # Core seller data extraction
-│   └── store_credentials_network_scraper.py  # Store credentials scraping
+│   ├── seller_data_populator.py       # Seller data population
+│   ├── store_credentials_network_scraper.py  # Store credentials scraping
+│   └── unified_seller_pipeline.py     # Unified seller processing pipeline
 └── utils/                      # Utility functions and helpers
+    ├── __init__.py
+    ├── async_cookie_generator.py  # Async cookie generation
     ├── captcha_solver.py       # CAPTCHA solving utilities
     ├── cookie_generator.py     # Cookie automation
-    └── logger.py               # Logging utilities
+    ├── logger.py               # Logging utilities
+    ├── retry_failed_sellers.py # Retry logic for failed sellers
+    └── transform_ocr_to_csv.py # OCR to CSV transformation utilities
 ```
 
 ## � Installation
@@ -38,17 +50,36 @@ Install the package in development mode:
 pip install -e .
 ```
 
-Or install dependencies manually:
+Or install dependencies with uv (recommended):
 
 ```bash
-pip install python-dotenv flask playwright requests python-aliexpress-api pandas pillow pytesseract opencv-python-headless numpy
+uv sync
+```
+
+The package requires Python >= 3.13 and includes the following dependencies:
+
+- `python-dotenv>=1.0.0` - Environment variable management
+- `flask>=3.1.1` - Web framework for OCR processing
+- `playwright>=1.54.0` - Browser automation for cookie generation
+- `requests>=2.32.0` - HTTP client for API requests
+- `python-aliexpress-api>=3.1.0` - AliExpress API integration
+- `pandas>=2.3.1` - Data manipulation and analysis
+- `pillow>=10.0.0` - Image processing for OCR
+- `pytesseract>=0.3.10` - OCR text extraction
+- `opencv-python-headless>=4.8.0` - Computer vision for image processing
+- `numpy>=1.24.0` - Numerical computing support
+
+After installation, install browser for automation:
+
+```bash
+playwright install chromium
 ```
 
 ## �🚀 Usage
 
 ### As a Python Module (Recommended)
 
-You can now run the scraper as a Python module:
+You can run the scraper as a Python module:
 
 ```bash
 # Show available commands
@@ -64,9 +95,9 @@ python3 -m aliexpress_store_scraper enhanced "https://www.aliexpress.us/item/325
 python3 -m aliexpress_store_scraper seller 12345 --format json
 
 # Store network scraping
-python3 -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678" --concurrent 10
-python3 -m aliexpress_store_scraper store-network --file store_ids.txt --concurrent 5
-python3 -m aliexpress_store_scraper store-network --json-file nike_products.json --concurrent 10
+python3 -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678"
+python3 -m aliexpress_store_scraper store-network --file store_ids.txt
+python3 -m aliexpress_store_scraper store-network --json-file nike_products.json
 
 # OCR Contact Data Transformation to CSV
 python3 -m aliexpress_store_scraper transform-ocr --contact-info nike_100_seller_contact_info.json --output sellers.csv
@@ -151,7 +182,7 @@ python enhanced_cli.py --test-automation
 ### 🐍 **Python Library Usage (Enhanced)**
 
 ```python
-from enhanced_aliexpress_client import EnhancedAliExpressClient
+from aliexpress_store_scraper.clients.enhanced_aliexpress_client import EnhancedAliExpressClient
 
 # Initialize with automation
 client = EnhancedAliExpressClient()
@@ -171,7 +202,7 @@ results = client.batch_get_products(["id1", "id2", "id3"])
 Extract the **6 available seller fields** from AliExpress products with 95%+ success rate:
 
 ```python
-from core_seller_extractor import CoreSellerExtractor
+from aliexpress_store_scraper.processors.core_seller_extractor import CoreSellerExtractor
 
 extractor = CoreSellerExtractor()
 seller_data = extractor.extract_core_seller_fields(api_response)
@@ -331,13 +362,13 @@ NEW: Dedicated store credential page scraping using optimized headless browser:
 
 ```bash
 # Scrape single store credentials
-python store_credentials_cli.py --store-ids "1234567890"
+python store_credentials_network_cli.py --store-ids "1234567890"
 
 # Batch scrape multiple stores
-python store_credentials_cli.py --store-ids "123456,789012,345678"
+python store_credentials_network_cli.py --store-ids "123456,789012,345678"
 
 # From file (one store ID per line)
-python store_credentials_cli.py --file store_ids.txt
+python store_credentials_network_cli.py --file store_ids.txt
 
 # With custom output and settings
 python store_credentials_network_cli.py --store-ids "123,456" --output results.json --delay 3.0
@@ -346,7 +377,7 @@ python store_credentials_network_cli.py --store-ids "123,456" --output results.j
 **Python Library Usage:**
 
 ```python
-from store_credentials_network_scraper import StoreCredentialsNetworkScraper
+from aliexpress_store_scraper.processors.store_credentials_network_scraper import StoreCredentialsNetworkScraper
 
 # Network-based scraping with API interception
 async with StoreCredentialsNetworkScraper() as scraper:
@@ -394,8 +425,8 @@ python3 -m aliexpress_store_scraper transform-ocr --help
 
 ```bash
 # Same functionality as CLI version
-python transform_ocr_to_csv.py --contact-info nike_100_seller_contact_info.json --output sellers.csv
-python transform_ocr_to_csv.py --combined nike_100_with_sellers.json nike_100_seller_contact_info.json --output complete_sellers.csv
+python -m aliexpress_store_scraper.utils.transform_ocr_to_csv --contact-info nike_100_seller_contact_info.json --output sellers.csv
+python -m aliexpress_store_scraper.utils.transform_ocr_to_csv --combined nike_100_with_sellers.json nike_100_seller_contact_info.json --output complete_sellers.csv
 ```
 
 **Key Features:**
@@ -426,7 +457,12 @@ All transformations produce CSV files with these key columns:
 2. **Seller Population JSON**: Store data with real names, URLs, and seller information  
 3. **OCR Results JSON**: Direct OCR processing output format
 
-For detailed documentation and examples, see `OCR_CSV_TRANSFORM.md`.
+For detailed documentation and examples, see the CLI help:
+
+```bash
+python3 -m aliexpress_store_scraper --help
+python3 -m aliexpress_store_scraper transform-ocr --help
+```
 
 ## 📁 Project Structure
 
@@ -446,15 +482,6 @@ For detailed documentation and examples, see `OCR_CSV_TRANSFORM.md`.
 - `store_credentials_network_cli.py` - Network-based certificate scraping CLI with CAPTCHA handling
 - `cli.py` - Original CLI (manual cookies)
 
-**Examples & Tests:**
-
-- `debug_captcha.py` - CAPTCHA debugging and testing utilities
-
-**Documentation:**
-
-- `README.md` - Complete project documentation including seller extraction guide
-- `CORE_FIELDS_SUMMARY.py` - Implementation summary
-
 ## Installation
 
 1. **Clone the repository**:
@@ -467,11 +494,11 @@ For detailed documentation and examples, see `OCR_CSV_TRANSFORM.md`.
 2. **Install dependencies**:
 
    ```bash
-   pip install requests playwright
+   pip install -e .
    # Install browser for automation
    playwright install chromium
    
-   # Or, if using uv:
+   # Or, if using uv (recommended):
    uv sync
    playwright install chromium
    ```
@@ -487,8 +514,8 @@ For detailed documentation and examples, see `OCR_CSV_TRANSFORM.md`.
 ### Complete Product & Seller Extraction
 
 ```python
-from enhanced_aliexpress_client import EnhancedAliExpressClient
-from core_seller_extractor import CoreSellerExtractor
+from aliexpress_store_scraper.clients.enhanced_aliexpress_client import EnhancedAliExpressClient
+from aliexpress_store_scraper.processors.core_seller_extractor import CoreSellerExtractor
 
 def get_complete_product_info(product_id):
     """Get both product and seller info in one call."""
@@ -633,7 +660,7 @@ python enhanced_cli.py --seller-demo
 ### Library Examples
 
 ```python
-from aliexpress_client import AliExpressClient
+from aliexpress_store_scraper.clients.aliexpress_client import AliExpressClient
 import json
 
 client = AliExpressClient()
@@ -717,19 +744,38 @@ Options:
 ## Project Structure
 
 ```bash
-├── cli.py                          # Main CLI tool for product scraping
-├── enhanced_cli.py                 # Enhanced CLI with additional features
-├── aliexpress_client.py            # Core AliExpress API client
-├── enhanced_aliexpress_client.py   # Enhanced client with proxy/retry logic
-├── cookie_generator.py             # Cookie generation via Playwright
-├── captcha_solver.py               # CAPTCHA solving utilities
-├── core_seller_extractor.py        # Seller field extraction (6 core fields)
-├── core_seller_cli.py              # CLI tool for seller data extraction
-├── logger.py                       # Logging configuration
-├── example.py                      # Usage examples
-├── cli_demo.sh                     # Demo script for CLI usage
-├── pyproject.toml                  # Project dependencies
-└── README.md                       # Main documentation
+├── aliexpress_store_scraper/           # Main package directory
+│   ├── __init__.py                     # Package initialization
+│   ├── __main__.py                     # CLI entry point
+│   ├── cli/                            # Command-line interfaces
+│   │   ├── cli.py                      # Basic product scraper CLI
+│   │   ├── enhanced_cli.py             # Enhanced CLI with automation
+│   │   ├── core_seller_cli.py          # Seller extraction CLI
+│   │   ├── store_credentials_network_cli.py # Store network scraper CLI
+│   │   ├── transform_ocr_cli.py        # OCR transformation CLI
+│   │   └── unified_pipeline.py         # Unified processing CLI
+│   ├── clients/                        # HTTP clients and API interfaces
+│   │   ├── aliexpress_client.py        # Core AliExpress API client
+│   │   └── enhanced_aliexpress_client.py # Enhanced client with automation
+│   ├── processors/                     # Data processing and business logic
+│   │   ├── batch_seller_processor.py   # Batch processing logic
+│   │   ├── brand_to_seller_pipeline.py # Brand-to-seller pipeline
+│   │   ├── business_license_processor.py # Business license extraction
+│   │   ├── core_seller_extractor.py    # Core seller data extraction
+│   │   ├── seller_data_populator.py    # Seller data population
+│   │   ├── store_credentials_network_scraper.py # Store credentials scraping
+│   │   └── unified_seller_pipeline.py  # Unified seller processing
+│   └── utils/                          # Utility functions and helpers
+│       ├── async_cookie_generator.py   # Async cookie generation
+│       ├── captcha_solver.py           # CAPTCHA solving utilities
+│       ├── cookie_generator.py         # Cookie automation
+│       ├── logger.py                   # Logging configuration
+│       ├── retry_failed_sellers.py     # Retry logic for failed sellers
+│       └── transform_ocr_to_csv.py     # OCR to CSV transformation
+├── cli.py                              # Backward compatibility wrapper
+├── enhanced_cli.py                     # Backward compatibility wrapper
+├── pyproject.toml                      # Project configuration and dependencies
+└── README.md                           # Main documentation
 ```
 
 ## Technical Details
@@ -778,10 +824,10 @@ python3 -m aliexpress_store_scraper seller 3256809096800275 --format json
 
 ```bash
 # Scrape multiple stores
-python3 -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678" --concurrent 10
+python3 -m aliexpress_store_scraper store-network --store-ids "123456,789012,345678"
 
 # From JSON file (extract Store IDs from product data)
-python3 -m aliexpress_store_scraper store-network --json-file nike_products.json --concurrent 10
+python3 -m aliexpress_store_scraper store-network --json-file nike_products.json
 ```
 
 **Show All Available Commands:**
